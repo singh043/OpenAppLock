@@ -1,6 +1,9 @@
 package com.openapplocktest.applock
 
+import android.content.ComponentName
 import android.content.Intent
+import android.provider.Settings
+
 import com.facebook.react.bridge.Arguments
 import com.facebook.react.bridge.Promise
 import com.facebook.react.bridge.ReactApplicationContext
@@ -12,7 +15,9 @@ class AppLockModule(
 ) : ReactContextBaseJavaModule(reactContext) {
 
     private val repository =
-        ProtectedAppsRepository(reactContext.applicationContext)
+        ProtectedAppsRepository(
+            reactContext.applicationContext
+        )
 
     override fun getName(): String {
         return "AppLockModule"
@@ -21,29 +26,38 @@ class AppLockModule(
     @ReactMethod
     fun getInstalledApps(promise: Promise) {
         try {
-            val packageManager = reactApplicationContext.packageManager
+            val packageManager =
+                reactApplicationContext.packageManager
 
-            val intent = Intent(Intent.ACTION_MAIN).apply {
-                addCategory(Intent.CATEGORY_LAUNCHER)
-            }
+            val intent =
+                Intent(Intent.ACTION_MAIN).apply {
+                    addCategory(Intent.CATEGORY_LAUNCHER)
+                }
 
-            val resolvedApps = packageManager.queryIntentActivities(
-                intent,
-                0
-            )
+            val resolvedApps =
+                packageManager.queryIntentActivities(
+                    intent,
+                    0
+                )
 
             val apps = Arguments.createArray()
 
             resolvedApps
                 .map { it.activityInfo.applicationInfo }
                 .distinctBy { it.packageName }
-                .filter { it.packageName != reactApplicationContext.packageName }
+                .filter {
+                    it.packageName !=
+                        reactApplicationContext.packageName
+                }
                 .sortedBy {
-                    packageManager.getApplicationLabel(it).toString()
+                    packageManager
+                        .getApplicationLabel(it)
+                        .toString()
                 }
                 .forEach { applicationInfo ->
 
-                    val app = Arguments.createMap()
+                    val app =
+                        Arguments.createMap()
 
                     app.putString(
                         "packageName",
@@ -53,7 +67,9 @@ class AppLockModule(
                     app.putString(
                         "appName",
                         packageManager
-                            .getApplicationLabel(applicationInfo)
+                            .getApplicationLabel(
+                                applicationInfo
+                            )
                             .toString()
                     )
 
@@ -70,6 +86,7 @@ class AppLockModule(
             promise.resolve(apps)
 
         } catch (exception: Exception) {
+
             promise.reject(
                 "GET_APPS_ERROR",
                 exception.message,
@@ -92,6 +109,7 @@ class AppLockModule(
             promise.resolve(apps)
 
         } catch (exception: Exception) {
+
             promise.reject(
                 "GET_PROTECTED_APPS_ERROR",
                 exception.message,
@@ -106,10 +124,14 @@ class AppLockModule(
         promise: Promise
     ) {
         try {
-            repository.addProtectedApp(packageName)
+            repository.addProtectedApp(
+                packageName
+            )
+
             promise.resolve(true)
 
         } catch (exception: Exception) {
+
             promise.reject(
                 "ADD_PROTECTED_APP_ERROR",
                 exception.message,
@@ -124,15 +146,77 @@ class AppLockModule(
         promise: Promise
     ) {
         try {
-            repository.removeProtectedApp(packageName)
+            repository.removeProtectedApp(
+                packageName
+            )
+
             promise.resolve(true)
 
         } catch (exception: Exception) {
+
             promise.reject(
                 "REMOVE_PROTECTED_APP_ERROR",
                 exception.message,
                 exception
             )
         }
+    }
+
+    @ReactMethod
+    fun isAccessibilityServiceEnabled(
+        promise: Promise
+    ) {
+        try {
+
+            val accessibilityServices =
+                Settings.Secure.getString(
+                    reactApplicationContext.contentResolver,
+                    Settings.Secure
+                        .ENABLED_ACCESSIBILITY_SERVICES
+                )
+
+            val expectedService =
+                ComponentName(
+                    reactApplicationContext,
+                    AppLockAccessibilityService::class.java
+                ).flattenToString()
+
+            val enabled =
+                accessibilityServices
+                    ?.split(":")
+                    ?.any {
+                        it.equals(
+                            expectedService,
+                            ignoreCase = true
+                        )
+                    }
+                    ?: false
+
+            promise.resolve(enabled)
+
+        } catch (exception: Exception) {
+
+            promise.reject(
+                "ACCESSIBILITY_CHECK_ERROR",
+                exception.message,
+                exception
+            )
+        }
+    }
+
+    @ReactMethod
+    fun openAccessibilitySettings() {
+
+        val intent =
+            Intent(
+                Settings.ACTION_ACCESSIBILITY_SETTINGS
+            )
+
+        intent.addFlags(
+            Intent.FLAG_ACTIVITY_NEW_TASK
+        )
+
+        reactApplicationContext
+            .startActivity(intent)
     }
 }
