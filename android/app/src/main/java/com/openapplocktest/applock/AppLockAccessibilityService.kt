@@ -10,7 +10,9 @@ class AppLockAccessibilityService : AccessibilityService() {
         private const val TAG = "OpenAppLock"
     }
 
-    private val appLockEngine = AppLockEngine()
+    private val appLockEngine by lazy {
+      AppLockEngine(applicationContext)
+    }
 
     override fun onServiceConnected() {
         super.onServiceConnected()
