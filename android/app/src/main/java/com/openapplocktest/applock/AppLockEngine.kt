@@ -26,9 +26,62 @@ class AppLockEngine(context: Context) {
 
         lastForegroundPackage = packageName
 
-        Log.d(TAG, "Foreground app changed: $packageName")
+        Log.d(
+            TAG,
+            "Foreground app changed: $packageName"
+        )
 
-        if (protectedAppsRepository.isProtected(packageName)) {
+        /*
+         * OpenAppLock itself is not a protected app.
+         *
+         * More importantly, while LockActivity is displayed,
+         * Android may report OpenAppLock as the foreground app.
+         * We must not clear the authenticated target because
+         * of that temporary transition.
+         */
+        if (
+            packageName ==
+            appContext.packageName
+        ) {
+            Log.d(
+                TAG,
+                "Ignoring OpenAppLock foreground event"
+            )
+            return
+        }
+
+        /*
+         * If the user moves to another app, the previous
+         * authenticated session is no longer valid.
+         */
+        LockSessionManager.clearIfDifferent(
+            packageName
+        )
+
+        /*
+         * If this app is already authenticated during the
+         * current session, allow it to remain open.
+         */
+        if (
+            LockSessionManager.isAuthenticated(
+                packageName
+            )
+        ) {
+            Log.d(
+                TAG,
+                "App already authenticated: $packageName"
+            )
+            return
+        }
+
+        /*
+         * Check whether the foreground app is protected.
+         */
+        if (
+            protectedAppsRepository.isProtected(
+                packageName
+            )
+        ) {
 
             Log.d(
                 TAG,
@@ -46,22 +99,26 @@ class AppLockEngine(context: Context) {
         }
     }
 
-    private fun launchLockActivity(packageName: String) {
+    private fun launchLockActivity(
+        packageName: String
+    ) {
 
-        val intent = Intent(
-            appContext,
-            LockActivity::class.java
-        ).apply {
-            putExtra(
-                LockActivity.EXTRA_TARGET_PACKAGE,
-                packageName
-            )
+        val intent =
+            Intent(
+                appContext,
+                LockActivity::class.java
+            ).apply {
 
-            addFlags(
-                Intent.FLAG_ACTIVITY_NEW_TASK or
-                    Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS
-            )
-        }
+                putExtra(
+                    LockActivity.EXTRA_TARGET_PACKAGE,
+                    packageName
+                )
+
+                addFlags(
+                    Intent.FLAG_ACTIVITY_NEW_TASK or
+                        Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS
+                )
+            }
 
         appContext.startActivity(intent)
 
@@ -71,8 +128,12 @@ class AppLockEngine(context: Context) {
         )
     }
 
-    fun addProtectedApp(packageName: String) {
-        protectedAppsRepository.addProtectedApp(packageName)
+    fun addProtectedApp(
+        packageName: String
+    ) {
+
+        protectedAppsRepository
+            .addProtectedApp(packageName)
 
         Log.d(
             TAG,
@@ -80,8 +141,12 @@ class AppLockEngine(context: Context) {
         )
     }
 
-    fun removeProtectedApp(packageName: String) {
-        protectedAppsRepository.removeProtectedApp(packageName)
+    fun removeProtectedApp(
+        packageName: String
+    ) {
+
+        protectedAppsRepository
+            .removeProtectedApp(packageName)
 
         Log.d(
             TAG,
@@ -90,6 +155,7 @@ class AppLockEngine(context: Context) {
     }
 
     fun getProtectedApps(): Set<String> {
-        return protectedAppsRepository.getProtectedApps()
+        return protectedAppsRepository
+            .getProtectedApps()
     }
 }

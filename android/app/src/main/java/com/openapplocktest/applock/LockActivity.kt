@@ -15,67 +15,115 @@ import android.text.InputFilter
 class LockActivity : Activity() {
 
     companion object {
-        const val EXTRA_TARGET_PACKAGE = "target_package"
+        const val EXTRA_TARGET_PACKAGE =
+            "target_package"
     }
 
-    private lateinit var authenticationManager: AuthenticationManager
+    private lateinit var authenticationManager:
+        AuthenticationManager
 
-    private lateinit var pinInput: EditText
-    private lateinit var confirmPinInput: EditText
-    private lateinit var actionButton: Button
+    private lateinit var pinInput:
+        EditText
 
-    override fun onCreate(savedInstanceState: Bundle?) {
+    private lateinit var confirmPinInput:
+        EditText
+
+    private lateinit var actionButton:
+        Button
+
+    private var targetPackage: String =
+        "Unknown app"
+
+    override fun onCreate(
+        savedInstanceState: Bundle?
+    ) {
         super.onCreate(savedInstanceState)
 
         authenticationManager =
-            AuthenticationManager(applicationContext)
+            AuthenticationManager(
+                applicationContext
+            )
 
-        val targetPackage =
-            intent.getStringExtra(EXTRA_TARGET_PACKAGE)
-                ?: "Unknown app"
+        targetPackage =
+            intent.getStringExtra(
+                EXTRA_TARGET_PACKAGE
+            ) ?: "Unknown app"
 
-        showAuthenticationScreen(targetPackage)
+        showAuthenticationScreen(
+            targetPackage
+        )
     }
 
     private fun showAuthenticationScreen(
         targetPackage: String
     ) {
-        val hasPin = authenticationManager.hasPin()
 
-        val layout = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            gravity = Gravity.CENTER
-            setPadding(48, 48, 48, 48)
-            setBackgroundColor(
-                Color.rgb(16, 16, 16)
-            )
-        }
+        val hasPin =
+            authenticationManager.hasPin()
 
-        val title = TextView(this).apply {
-            text = if (hasPin) {
-                "App Locked"
-            } else {
-                "Create AppLock PIN"
+        val layout =
+            LinearLayout(this).apply {
+
+                orientation =
+                    LinearLayout.VERTICAL
+
+                gravity =
+                    Gravity.CENTER
+
+                setPadding(
+                    48,
+                    48,
+                    48,
+                    48
+                )
+
+                setBackgroundColor(
+                    Color.rgb(16, 16, 16)
+                )
             }
 
-            textSize = 28f
-            setTextColor(Color.WHITE)
-            gravity = Gravity.CENTER
-        }
+        val title =
+            TextView(this).apply {
 
-        val message = TextView(this).apply {
-            text = if (hasPin) {
-                "Enter your AppLock PIN"
-            } else {
-                "Create a 4 or 6 digit PIN"
+                text =
+                    if (hasPin) {
+                        "App Locked"
+                    } else {
+                        "Create AppLock PIN"
+                    }
+
+                textSize = 28f
+
+                setTextColor(
+                    Color.WHITE
+                )
+
+                gravity =
+                    Gravity.CENTER
             }
 
-            textSize = 16f
-            setTextColor(Color.LTGRAY)
-            gravity = Gravity.CENTER
-        }
+        val message =
+            TextView(this).apply {
 
-        pinInput = createPinInput()
+                text =
+                    if (hasPin) {
+                        "Enter your AppLock PIN"
+                    } else {
+                        "Create a 4 or 6 digit PIN"
+                    }
+
+                textSize = 16f
+
+                setTextColor(
+                    Color.LTGRAY
+                )
+
+                gravity =
+                    Gravity.CENTER
+            }
+
+        pinInput =
+            createPinInput()
 
         layout.addView(title)
 
@@ -91,13 +139,15 @@ class LockActivity : Activity() {
 
         if (hasPin) {
 
-            actionButton = Button(this).apply {
-                text = "Unlock"
+            actionButton =
+                Button(this).apply {
 
-                setOnClickListener {
-                    verifyPin()
+                    text = "Unlock"
+
+                    setOnClickListener {
+                        verifyPin()
+                    }
                 }
-            }
 
             layout.addView(
                 actionButton,
@@ -106,22 +156,26 @@ class LockActivity : Activity() {
 
         } else {
 
-            confirmPinInput = createPinInput()
+            confirmPinInput =
+                createPinInput()
 
-            confirmPinInput.hint = "Confirm PIN"
+            confirmPinInput.hint =
+                "Confirm PIN"
 
             layout.addView(
                 confirmPinInput,
-                createLayoutParams(16)
+                createLayoutParams(24)
             )
 
-            actionButton = Button(this).apply {
-                text = "Create PIN"
+            actionButton =
+                Button(this).apply {
 
-                setOnClickListener {
-                    createPin()
+                    text = "Create PIN"
+
+                    setOnClickListener {
+                        createPin()
+                    }
                 }
-            }
 
             layout.addView(
                 actionButton,
@@ -129,12 +183,20 @@ class LockActivity : Activity() {
             )
         }
 
-        val target = TextView(this).apply {
-            text = targetPackage
-            textSize = 12f
-            setTextColor(Color.GRAY)
-            gravity = Gravity.CENTER
-        }
+        val target =
+            TextView(this).apply {
+
+                text = targetPackage
+
+                textSize = 12f
+
+                setTextColor(
+                    Color.GRAY
+                )
+
+                gravity =
+                    Gravity.CENTER
+            }
 
         layout.addView(
             target,
@@ -145,55 +207,95 @@ class LockActivity : Activity() {
     }
 
     private fun createPinInput(): EditText {
+
         return EditText(this).apply {
+
             hint = "PIN"
+
             textSize = 20f
-            gravity = Gravity.CENTER
-            setTextColor(Color.WHITE)
-            setHintTextColor(Color.GRAY)
+
+            gravity =
+                Gravity.CENTER
+
+            setTextColor(
+                Color.WHITE
+            )
+
+            setHintTextColor(
+                Color.GRAY
+            )
 
             inputType =
                 InputType.TYPE_CLASS_NUMBER or
                     InputType.TYPE_NUMBER_VARIATION_PASSWORD
 
-            filters = arrayOf(
-    InputFilter.LengthFilter(6)
-)
+            filters =
+                arrayOf(
+                    InputFilter.LengthFilter(6)
+                )
         }
     }
 
     private fun createPin() {
 
-        val pin = pinInput.text.toString()
-        val confirmPin =
-            confirmPinInput.text.toString()
+        val pin =
+            pinInput.text.toString()
 
-        if (pin.length != 4 && pin.length != 6) {
+        val confirmPin =
+            confirmPinInput
+                .text
+                .toString()
+
+        if (
+            pin.length != 4 &&
+            pin.length != 6
+        ) {
+
             showMessage(
                 "PIN must contain 4 or 6 digits"
             )
+
             return
         }
 
-        if (!pin.all { it.isDigit() }) {
+        if (
+            !pin.all {
+                it.isDigit()
+            }
+        ) {
+
             showMessage(
                 "PIN must contain only digits"
             )
+
             return
         }
 
         if (pin != confirmPin) {
+
             showMessage(
                 "PINs do not match"
             )
+
             return
         }
 
         try {
 
-            authenticationManager.createPin(pin)
+            authenticationManager
+                .createPin(pin)
 
-            showMessage("PIN created")
+            /*
+             * The PIN has just been created, so the target
+             * app is authenticated for this session.
+             */
+            LockSessionManager.authenticate(
+                targetPackage
+            )
+
+            showMessage(
+                "PIN created"
+            )
 
             finish()
 
@@ -208,16 +310,37 @@ class LockActivity : Activity() {
 
     private fun verifyPin() {
 
-        val pin = pinInput.text.toString()
+        val pin =
+            pinInput.text.toString()
 
         if (pin.isEmpty()) {
-            showMessage("Enter your PIN")
+
+            showMessage(
+                "Enter your PIN"
+            )
+
             return
         }
 
-        if (authenticationManager.verifyPin(pin)) {
+        if (
+            authenticationManager
+                .verifyPin(pin)
+        ) {
 
-            showMessage("Unlocked")
+            /*
+             * Authentication succeeded.
+             *
+             * Remember the target app so the Accessibility
+             * service does not immediately show the lock screen
+             * again while the user is using the app.
+             */
+            LockSessionManager.authenticate(
+                targetPackage
+            )
+
+            showMessage(
+                "Unlocked"
+            )
 
             finish()
 
@@ -225,7 +348,9 @@ class LockActivity : Activity() {
 
             pinInput.text.clear()
 
-            showMessage("Incorrect PIN")
+            showMessage(
+                "Incorrect PIN"
+            )
         }
     }
 
@@ -241,7 +366,9 @@ class LockActivity : Activity() {
         }
     }
 
-    private fun showMessage(message: String) {
+    private fun showMessage(
+        message: String
+    ) {
 
         Toast.makeText(
             this,

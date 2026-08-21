@@ -1,6 +1,8 @@
 import React, {useEffect, useState} from 'react';
 import {
   ActivityIndicator,
+  AppState,
+  AppStateStatus,
   FlatList,
   NativeModules,
   SafeAreaView,
@@ -23,15 +25,56 @@ const {AppLockModule} = NativeModules;
 function App(): React.JSX.Element {
   const [apps, setApps] = useState<InstalledApp[]>([]);
   const [loading, setLoading] = useState(true);
+
+  /*
+   * null  = checking
+   * true  = Accessibility enabled
+   * false = Accessibility disabled
+   */
   const [accessibilityEnabled, setAccessibilityEnabled] =
-    useState(false);
+    useState<boolean | null>(null);
 
   useEffect(() => {
+    /*
+     * Initial Accessibility check.
+     */
     checkAccessibility();
+
+    /*
+     * Re-check Accessibility whenever the app
+     * comes back from Android Settings.
+     */
+    const subscription =
+      AppState.addEventListener(
+        'change',
+        handleAppStateChange,
+      );
+
+    return () => {
+      subscription.remove();
+    };
   }, []);
+
+  const handleAppStateChange = (
+    nextAppState: AppStateStatus,
+  ) => {
+    /*
+     * When OpenAppLock becomes active again,
+     * check Accessibility status again.
+     */
+    if (nextAppState === 'active') {
+      checkAccessibility();
+    }
+  };
 
   const checkAccessibility = async () => {
     try {
+      /*
+       * While checking, don't show either the
+       * setup screen or the app list.
+       */
+      setAccessibilityEnabled(null);
+
       const enabled =
         await AppLockModule.isAccessibilityServiceEnabled();
 
@@ -48,6 +91,7 @@ function App(): React.JSX.Element {
         error,
       );
 
+      setAccessibilityEnabled(false);
       setLoading(false);
     }
   };
@@ -74,7 +118,9 @@ function App(): React.JSX.Element {
     AppLockModule.openAccessibilitySettings();
   };
 
-  const toggleApp = async (app: InstalledApp) => {
+  const toggleApp = async (
+    app: InstalledApp,
+  ) => {
     try {
       if (app.isProtected) {
         await AppLockModule.removeProtectedApp(
@@ -88,7 +134,8 @@ function App(): React.JSX.Element {
 
       setApps(currentApps =>
         currentApps.map(currentApp =>
-          currentApp.packageName === app.packageName
+          currentApp.packageName ===
+          app.packageName
             ? {
                 ...currentApp,
                 isProtected:
@@ -132,6 +179,28 @@ function App(): React.JSX.Element {
     );
   };
 
+  /*
+   * Accessibility status is still being checked.
+   */
+  if (accessibilityEnabled === null) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <StatusBar barStyle="light-content" />
+
+        <View style={styles.loading}>
+          <ActivityIndicator size="large" />
+
+          <Text style={styles.loadingText}>
+            Checking Accessibility...
+          </Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  /*
+   * Accessibility is disabled.
+   */
   if (!accessibilityEnabled) {
     return (
       <SafeAreaView style={styles.container}>
@@ -159,6 +228,9 @@ function App(): React.JSX.Element {
     );
   }
 
+  /*
+   * Accessibility is enabled.
+   */
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar barStyle="light-content" />
