@@ -70,7 +70,7 @@ class LockActivity : Activity() {
     private var verifiedCurrentCredential:
         String? = null
 
-    private var pendingNewPattern:
+    private var pendingNewCredential:
         String? = null
 
     private var targetPackage =
@@ -123,11 +123,8 @@ class LockActivity : Activity() {
         if (
             isChangingCredential
         ) {
-
             showCurrentCredentialScreen()
-
         } else {
-
             showAuthenticationScreen()
         }
     }
@@ -172,11 +169,8 @@ class LockActivity : Activity() {
         if (
             isChangingCredential
         ) {
-
             showCurrentCredentialScreen()
-
         } else {
-
             showAuthenticationScreen()
         }
     }
@@ -189,11 +183,7 @@ class LockActivity : Activity() {
 
     private fun showAuthenticationScreen() {
 
-        pinInput = null
-        passwordInput = null
-        confirmInput = null
-        patternView = null
-        confirmPatternView = null
+        clearInputReferences()
 
         val hasPin =
             authenticationManager.hasPin()
@@ -375,35 +365,17 @@ class LockActivity : Activity() {
      * =========================================================
      * CHANGE LOCK TYPE / CREDENTIAL
      * =========================================================
-     *
-     * Screen 1:
-     * Current credential ONLY.
-     *
-     * Screen 2:
-     * New credential ONLY.
-     *
-     * Pattern change:
-     *
-     * Screen 1 -> Current credential
-     * Screen 2 -> New pattern
-     * Screen 3 -> Confirm pattern
-     *
-     * Pattern is saved only after confirmation succeeds.
-     *
-     * =========================================================
      */
 
     private fun showCurrentCredentialScreen() {
 
-        pinInput = null
-        passwordInput = null
-        confirmInput = null
-        patternView = null
-        confirmPatternView = null
-        currentCredentialInput = null
-        currentPatternView = null
-        verifiedCurrentCredential = null
-        pendingNewPattern = null
+        clearInputReferences()
+
+        verifiedCurrentCredential =
+            null
+
+        pendingNewCredential =
+            null
 
         rootLayout =
             createRootLayout()
@@ -539,19 +511,6 @@ class LockActivity : Activity() {
             return
         }
 
-        /*
-         * IMPORTANT:
-         *
-         * Current lock type is NOT changed here.
-         *
-         * We only remember the successfully
-         * verified current credential.
-         *
-         * The new lock type will be saved only
-         * after the new credential is successfully
-         * completed.
-         */
-
         verifiedCurrentCredential =
             currentCredential
 
@@ -560,25 +519,19 @@ class LockActivity : Activity() {
 
     /*
      * =========================================================
-     * NEW CREDENTIAL SCREEN
+     * NEW CREDENTIAL - SCREEN 1
      * =========================================================
      */
 
     private fun showNewCredentialScreen() {
 
-        pinInput = null
-        passwordInput = null
-        confirmInput = null
-        patternView = null
-        confirmPatternView = null
-        currentCredentialInput = null
-        currentPatternView = null
+        clearInputReferences()
 
         rootLayout =
             createRootLayout()
 
         addHeader(
-            "Change ${displayLockType(newLockType)}",
+            "New ${displayLockType(newLockType)}",
             "Enter your new ${displayLockType(newLockType)}"
         )
 
@@ -587,19 +540,19 @@ class LockActivity : Activity() {
             AuthenticationManager
                 .LOCK_TYPE_PIN -> {
 
-                createNewPinInput()
+                createNewPinScreen()
             }
 
             AuthenticationManager
                 .LOCK_TYPE_PASSWORD -> {
 
-                createNewPasswordInput()
+                createNewPasswordScreen()
             }
 
             AuthenticationManager
                 .LOCK_TYPE_PATTERN -> {
 
-                createNewPatternInput()
+                createNewPatternScreen()
             }
 
             AuthenticationManager
@@ -651,6 +604,835 @@ class LockActivity : Activity() {
         setContentView(
             rootLayout
         )
+    }
+
+    /*
+     * =========================================================
+     * NEW PIN - SCREEN 1
+     * =========================================================
+     */
+
+    private fun createNewPinScreen() {
+
+        addSimpleText(
+            "New PIN",
+            15,
+            Color.rgb(
+                210,
+                210,
+                210
+            ),
+            24
+        )
+
+        val container =
+            createInputContainer()
+
+        pinInput =
+            createEditText(
+                "Enter new PIN"
+            )
+
+        pinInput?.inputType =
+            InputType.TYPE_CLASS_NUMBER or
+                InputType.TYPE_NUMBER_VARIATION_PASSWORD
+
+        pinInput?.filters =
+            arrayOf(
+                InputFilter.LengthFilter(
+                    6
+                )
+            )
+
+        container.addView(
+            pinInput,
+            createInnerInputParams()
+        )
+
+        rootLayout.addView(
+            container,
+            createLayoutParams(
+                0,
+                12
+            )
+        )
+
+        actionButton =
+            createButton(
+                "Continue"
+            )
+
+        actionButton.setOnClickListener {
+
+            continueToConfirmPin()
+        }
+
+        rootLayout.addView(
+            actionButton,
+            createLayoutParams(
+                0,
+                18
+            )
+        )
+    }
+
+    private fun continueToConfirmPin() {
+
+        val newPin =
+            pinInput
+                ?.text
+                ?.toString()
+                ?: ""
+
+        if (
+            newPin.length != 4 &&
+            newPin.length != 6
+        ) {
+
+            showMessage(
+                "PIN must contain 4 or 6 digits"
+            )
+
+            return
+        }
+
+        if (
+            !newPin.all {
+                it.isDigit()
+            }
+        ) {
+
+            showMessage(
+                "PIN must contain only digits"
+            )
+
+            return
+        }
+
+        pendingNewCredential =
+            newPin
+
+        showConfirmPinScreen()
+    }
+
+    /*
+     * =========================================================
+     * CONFIRM PIN - SCREEN 2
+     * =========================================================
+     */
+
+    private fun showConfirmPinScreen() {
+
+        clearInputReferences()
+
+        rootLayout =
+            createRootLayout()
+
+        addHeader(
+            "Confirm PIN",
+            "Enter your new PIN again"
+        )
+
+        addSimpleText(
+            "Confirm New PIN",
+            15,
+            Color.rgb(
+                210,
+                210,
+                210
+            ),
+            24
+        )
+
+        val container =
+            createInputContainer()
+
+        confirmInput =
+            createEditText(
+                "Confirm new PIN"
+            )
+
+        confirmInput?.inputType =
+            InputType.TYPE_CLASS_NUMBER or
+                InputType.TYPE_NUMBER_VARIATION_PASSWORD
+
+        confirmInput?.filters =
+            arrayOf(
+                InputFilter.LengthFilter(
+                    6
+                )
+            )
+
+        container.addView(
+            confirmInput,
+            createInnerInputParams()
+        )
+
+        rootLayout.addView(
+            container,
+            createLayoutParams(
+                0,
+                12
+            )
+        )
+
+        actionButton =
+            createButton(
+                "Change PIN"
+            )
+
+        actionButton.setOnClickListener {
+
+            changePin()
+        }
+
+        rootLayout.addView(
+            actionButton,
+            createLayoutParams(
+                0,
+                18
+            )
+        )
+
+        addTargetPackage()
+
+        setContentView(
+            rootLayout
+        )
+    }
+
+private fun changePin() {
+
+    val currentCredential =
+        verifiedCurrentCredential
+
+    val newPin =
+        pendingNewCredential
+            ?: ""
+
+    val confirmPin =
+        confirmInput
+            ?.text
+            ?.toString()
+            ?: ""
+
+    if (
+        currentCredential == null
+    ) {
+
+        showMessage(
+            "Verify your current credential first"
+        )
+
+        return
+    }
+
+    if (
+        newPin.length != 4 &&
+        newPin.length != 6
+    ) {
+
+        showMessage(
+            "PIN must contain 4 or 6 digits"
+        )
+
+        return
+    }
+
+    if (
+        newPin != confirmPin
+    ) {
+
+        confirmInput
+            ?.text
+            ?.clear()
+
+        showMessage(
+            "PINs do not match"
+        )
+
+        return
+    }
+
+    try {
+
+        /*
+         * Current PIN / Pattern / Password has already
+         * been verified on the previous screen.
+         *
+         * createPin() stores the new PIN and makes PIN
+         * the active lock type.
+         *
+         * Supports:
+         *
+         * PIN -> PIN
+         * Pattern -> PIN
+         * Password -> PIN
+         */
+        authenticationManager
+            .createPin(
+                newPin
+            )
+
+        LockSessionManager.clearAll()
+
+        showMessage(
+            "PIN changed successfully"
+        )
+
+        finish()
+
+    } catch (
+        exception: Exception
+    ) {
+
+        showMessage(
+            exception.message
+                ?: "Unable to change PIN"
+        )
+    }
+}
+
+    /*
+     * =========================================================
+     * NEW PASSWORD - SCREEN 1
+     * =========================================================
+     */
+
+    private fun createNewPasswordScreen() {
+
+        addSimpleText(
+            "New Password",
+            15,
+            Color.rgb(
+                210,
+                210,
+                210
+            ),
+            24
+        )
+
+        val container =
+            createInputContainer()
+
+        passwordInput =
+            createEditText(
+                "Enter new password"
+            )
+
+        passwordInput?.inputType =
+            InputType.TYPE_CLASS_TEXT or
+                InputType.TYPE_TEXT_VARIATION_PASSWORD
+
+        passwordInput?.filters =
+            arrayOf(
+                InputFilter.LengthFilter(
+                    64
+                )
+            )
+
+        container.addView(
+            passwordInput,
+            createInnerInputParams()
+        )
+
+        rootLayout.addView(
+            container,
+            createLayoutParams(
+                0,
+                12
+            )
+        )
+
+        actionButton =
+            createButton(
+                "Continue"
+            )
+
+        actionButton.setOnClickListener {
+
+            continueToConfirmPassword()
+        }
+
+        rootLayout.addView(
+            actionButton,
+            createLayoutParams(
+                0,
+                18
+            )
+        )
+    }
+
+    private fun continueToConfirmPassword() {
+
+        val newPassword =
+            passwordInput
+                ?.text
+                ?.toString()
+                ?: ""
+
+        if (
+            newPassword.length < 4
+        ) {
+
+            showMessage(
+                "Password must contain at least 4 characters"
+            )
+
+            return
+        }
+
+        if (
+            newPassword.length > 64
+        ) {
+
+            showMessage(
+                "Password is too long"
+            )
+
+            return
+        }
+
+        pendingNewCredential =
+            newPassword
+
+        showConfirmPasswordScreen()
+    }
+
+    /*
+     * =========================================================
+     * CONFIRM PASSWORD - SCREEN 2
+     * =========================================================
+     */
+
+    private fun showConfirmPasswordScreen() {
+
+        clearInputReferences()
+
+        rootLayout =
+            createRootLayout()
+
+        addHeader(
+            "Confirm Password",
+            "Enter your new password again"
+        )
+
+        addSimpleText(
+            "Confirm New Password",
+            15,
+            Color.rgb(
+                210,
+                210,
+                210
+            ),
+            24
+        )
+
+        val container =
+            createInputContainer()
+
+        confirmInput =
+            createEditText(
+                "Confirm new password"
+            )
+
+        confirmInput?.inputType =
+            InputType.TYPE_CLASS_TEXT or
+                InputType.TYPE_TEXT_VARIATION_PASSWORD
+
+        confirmInput?.filters =
+            arrayOf(
+                InputFilter.LengthFilter(
+                    64
+                )
+            )
+
+        container.addView(
+            confirmInput,
+            createInnerInputParams()
+        )
+
+        rootLayout.addView(
+            container,
+            createLayoutParams(
+                0,
+                12
+            )
+        )
+
+        actionButton =
+            createButton(
+                "Change Password"
+            )
+
+        actionButton.setOnClickListener {
+
+            changePassword()
+        }
+
+        rootLayout.addView(
+            actionButton,
+            createLayoutParams(
+                0,
+                18
+            )
+        )
+
+        addTargetPackage()
+
+        setContentView(
+            rootLayout
+        )
+    }
+
+    private fun changePassword() {
+
+        val currentCredential =
+            verifiedCurrentCredential
+
+        val newPassword =
+            pendingNewCredential
+                ?: ""
+
+        val confirmPassword =
+            confirmInput
+                ?.text
+                ?.toString()
+                ?: ""
+
+        if (
+            currentCredential == null
+        ) {
+
+            showMessage(
+                "Verify your current credential first"
+            )
+
+            return
+        }
+
+        if (
+            newPassword.length < 4
+        ) {
+
+            showMessage(
+                "Password must contain at least 4 characters"
+            )
+
+            return
+        }
+
+        if (
+            newPassword.length > 64
+        ) {
+
+            showMessage(
+                "Password is too long"
+            )
+
+            return
+        }
+
+        if (
+            newPassword !=
+                confirmPassword
+        ) {
+
+            confirmInput
+                ?.text
+                ?.clear()
+
+            showMessage(
+                "Passwords do not match"
+            )
+
+            return
+        }
+
+        try {
+
+            authenticationManager
+                .changePassword(
+                    lockType,
+                    currentCredential,
+                    newPassword
+                )
+
+            LockSessionManager.clearAll()
+
+            showMessage(
+                "Password changed successfully"
+            )
+
+            finish()
+
+        } catch (
+            exception: Exception
+        ) {
+
+            showMessage(
+                exception.message
+                    ?: "Unable to change password"
+            )
+        }
+    }
+
+    /*
+     * =========================================================
+     * NEW PATTERN - SCREEN 1
+     * =========================================================
+     */
+
+    private fun createNewPatternScreen() {
+
+        addSimpleText(
+            "New Pattern",
+            15,
+            Color.rgb(
+                210,
+                210,
+                210
+            ),
+            24
+        )
+
+        patternView =
+            PatternView(
+                this
+            )
+
+        val patternContainer =
+            createPatternContainer(
+                patternView!!
+            )
+
+        rootLayout.addView(
+            patternContainer,
+            createPatternLayoutParams()
+        )
+
+        addSimpleText(
+            "Use at least 4 points",
+            12,
+            Color.rgb(
+                120,
+                120,
+                120
+            ),
+            10
+        )
+
+        actionButton =
+            createButton(
+                "Continue"
+            )
+
+        actionButton.setOnClickListener {
+
+            continueToConfirmPattern()
+        }
+
+        rootLayout.addView(
+            actionButton,
+            createLayoutParams(
+                0,
+                18
+            )
+        )
+    }
+
+    private fun continueToConfirmPattern() {
+
+        val newPattern =
+            patternView
+                ?.getPatternString()
+                ?: ""
+
+        if (
+            newPattern.length < 4
+        ) {
+
+            showMessage(
+                "Pattern must contain at least 4 points"
+            )
+
+            return
+        }
+
+        pendingNewCredential =
+            newPattern
+
+        showConfirmPatternScreen()
+    }
+
+    /*
+     * =========================================================
+     * CONFIRM PATTERN - SCREEN 2
+     * =========================================================
+     */
+
+    private fun showConfirmPatternScreen() {
+
+        clearInputReferences()
+
+        rootLayout =
+            createRootLayout()
+
+        addHeader(
+            "Confirm Pattern",
+            "Draw the same pattern again"
+        )
+
+        addSimpleText(
+            "Confirm New Pattern",
+            15,
+            Color.rgb(
+                210,
+                210,
+                210
+            ),
+            24
+        )
+
+        confirmPatternView =
+            PatternView(
+                this
+            )
+
+        val patternContainer =
+            createPatternContainer(
+                confirmPatternView!!
+            )
+
+        rootLayout.addView(
+            patternContainer,
+            createPatternLayoutParams()
+        )
+
+        addSimpleText(
+            "Draw the same pattern again",
+            12,
+            Color.rgb(
+                120,
+                120,
+                120
+            ),
+            10
+        )
+
+        actionButton =
+            createButton(
+                "Change Pattern"
+            )
+
+        actionButton.setOnClickListener {
+
+            changePattern()
+        }
+
+        rootLayout.addView(
+            actionButton,
+            createLayoutParams(
+                0,
+                18
+            )
+        )
+
+        addTargetPackage()
+
+        setContentView(
+            rootLayout
+        )
+    }
+
+    private fun changePattern() {
+
+        val currentCredential =
+            verifiedCurrentCredential
+
+        val newPattern =
+            pendingNewCredential
+                ?: ""
+
+        val confirmPattern =
+            confirmPatternView
+                ?.getPatternString()
+                ?: ""
+
+        if (
+            currentCredential == null
+        ) {
+
+            showMessage(
+                "Verify your current credential first"
+            )
+
+            return
+        }
+
+        if (
+            newPattern.length < 4
+        ) {
+
+            showMessage(
+                "New pattern must contain at least 4 points"
+            )
+
+            return
+        }
+
+        if (
+            confirmPattern.length < 4
+        ) {
+
+            showMessage(
+                "Confirm your new pattern"
+            )
+
+            return
+        }
+
+        if (
+            newPattern !=
+                confirmPattern
+        ) {
+
+            confirmPatternView
+                ?.clearPattern()
+
+            showMessage(
+                "Patterns do not match"
+            )
+
+            return
+        }
+
+        try {
+
+            authenticationManager
+                .changePattern(
+                    lockType,
+                    currentCredential,
+                    newPattern
+                )
+
+            LockSessionManager.clearAll()
+
+            showMessage(
+                "Pattern changed successfully"
+            )
+
+            finish()
+
+        } catch (
+            exception: Exception
+        ) {
+
+            showMessage(
+                exception.message
+                    ?: "Unable to change pattern"
+            )
+        }
     }
 
     /*
@@ -766,59 +1548,19 @@ class LockActivity : Activity() {
                     10
                 )
 
-                val patternContainer =
-                    LinearLayout(this).apply {
-
-                        orientation =
-                            LinearLayout.VERTICAL
-
-                        gravity =
-                            Gravity.CENTER
-
-                        background =
-                            createRoundedBackground(
-                                Color.rgb(
-                                    20,
-                                    20,
-                                    20
-                                ),
-                                dp(22).toFloat()
-                            )
-
-                        setPadding(
-                            dp(12),
-                            dp(12),
-                            dp(12),
-                            dp(12)
-                        )
-                    }
-
                 currentPatternView =
                     PatternView(
                         this
                     )
 
-                patternContainer.addView(
-                    currentPatternView,
-                    LinearLayout.LayoutParams(
-                        dp(290),
-                        dp(290)
+                val patternContainer =
+                    createPatternContainer(
+                        currentPatternView!!
                     )
-                )
 
                 rootLayout.addView(
                     patternContainer,
-                    LinearLayout.LayoutParams(
-                        dp(314),
-                        dp(314)
-                    ).apply {
-
-                        gravity =
-                            Gravity.CENTER
-
-                        topMargin =
-                            dp(8)
-                    }
+                    createPatternLayoutParams()
                 )
 
                 addSimpleText(
@@ -900,805 +1642,6 @@ class LockActivity : Activity() {
 
                 null
             }
-        }
-    }
-
-    /*
-     * =========================================================
-     * NEW PIN
-     * =========================================================
-     */
-
-    private fun createNewPinInput() {
-
-        addSimpleText(
-            "New PIN",
-            14,
-            Color.rgb(
-                210,
-                210,
-                210
-            ),
-            18
-        )
-
-        val container =
-            createInputContainer()
-
-        pinInput =
-            createEditText(
-                "Enter new PIN"
-            )
-
-        pinInput?.inputType =
-            InputType.TYPE_CLASS_NUMBER or
-                InputType.TYPE_NUMBER_VARIATION_PASSWORD
-
-        pinInput?.filters =
-            arrayOf(
-                InputFilter.LengthFilter(
-                    6
-                )
-            )
-
-        container.addView(
-            pinInput,
-            createInnerInputParams()
-        )
-
-        rootLayout.addView(
-            container,
-            createLayoutParams(
-                0,
-                10
-            )
-        )
-
-        val confirmContainer =
-            createInputContainer()
-
-        confirmInput =
-            createEditText(
-                "Confirm new PIN"
-            )
-
-        confirmInput?.inputType =
-            InputType.TYPE_CLASS_NUMBER or
-                InputType.TYPE_NUMBER_VARIATION_PASSWORD
-
-        confirmInput?.filters =
-            arrayOf(
-                InputFilter.LengthFilter(
-                    6
-                )
-            )
-
-        confirmContainer.addView(
-            confirmInput,
-            createInnerInputParams()
-        )
-
-        rootLayout.addView(
-            confirmContainer,
-            createLayoutParams(
-                0,
-                10
-            )
-        )
-
-        actionButton =
-            createButton(
-                "Change PIN"
-            )
-
-        actionButton.setOnClickListener {
-            changePin()
-        }
-
-        rootLayout.addView(
-            actionButton,
-            createLayoutParams(
-                0,
-                18
-            )
-        )
-    }
-
-    private fun changePin() {
-
-        val currentCredential =
-            verifiedCurrentCredential
-
-        if (
-            currentCredential == null
-        ) {
-
-            showMessage(
-                "Verify your current credential first"
-            )
-
-            return
-        }
-
-        val newPin =
-            pinInput
-                ?.text
-                ?.toString()
-                ?: ""
-
-        val confirmPin =
-            confirmInput
-                ?.text
-                ?.toString()
-                ?: ""
-
-        if (
-            newPin.length != 4 &&
-            newPin.length != 6
-        ) {
-
-            showMessage(
-                "PIN must contain 4 or 6 digits"
-            )
-
-            return
-        }
-
-        if (
-            !newPin.all {
-                it.isDigit()
-            }
-        ) {
-
-            showMessage(
-                "PIN must contain only digits"
-            )
-
-            return
-        }
-
-        if (
-            newPin != confirmPin
-        ) {
-
-            showMessage(
-                "PINs do not match"
-            )
-
-            return
-        }
-
-        try {
-
-            if (
-                lockType ==
-                    AuthenticationManager
-                        .LOCK_TYPE_PIN
-            ) {
-
-                authenticationManager
-                    .changePin(
-                        currentCredential,
-                        newPin
-                    )
-
-            } else {
-
-                showMessage(
-                    "Changing to PIN from ${displayLockType(lockType)} is not available yet"
-                )
-
-                return
-            }
-
-            LockSessionManager.clearAll()
-
-            showMessage(
-                "PIN changed successfully"
-            )
-
-            finish()
-
-        } catch (
-            exception: Exception
-        ) {
-
-            showMessage(
-                exception.message
-                    ?: "Unable to change PIN"
-            )
-        }
-    }
-
-    /*
-     * =========================================================
-     * NEW PASSWORD
-     * =========================================================
-     */
-
-    private fun createNewPasswordInput() {
-
-        addSimpleText(
-            "New Password",
-            14,
-            Color.rgb(
-                210,
-                210,
-                210
-            ),
-            18
-        )
-
-        val container =
-            createInputContainer()
-
-        passwordInput =
-            createEditText(
-                "Enter new password"
-            )
-
-        passwordInput?.inputType =
-            InputType.TYPE_CLASS_TEXT or
-                InputType.TYPE_TEXT_VARIATION_PASSWORD
-
-        passwordInput?.filters =
-            arrayOf(
-                InputFilter.LengthFilter(
-                    64
-                )
-            )
-
-        container.addView(
-            passwordInput,
-            createInnerInputParams()
-        )
-
-        rootLayout.addView(
-            container,
-            createLayoutParams(
-                0,
-                10
-            )
-        )
-
-        val confirmContainer =
-            createInputContainer()
-
-        confirmInput =
-            createEditText(
-                "Confirm new password"
-            )
-
-        confirmInput?.inputType =
-            InputType.TYPE_CLASS_TEXT or
-                InputType.TYPE_TEXT_VARIATION_PASSWORD
-
-        confirmInput?.filters =
-            arrayOf(
-                InputFilter.LengthFilter(
-                    64
-                )
-            )
-
-        confirmContainer.addView(
-            confirmInput,
-            createInnerInputParams()
-        )
-
-        rootLayout.addView(
-            confirmContainer,
-            createLayoutParams(
-                0,
-                10
-            )
-        )
-
-        actionButton =
-            createButton(
-                "Change Password"
-            )
-
-        actionButton.setOnClickListener {
-            changePassword()
-        }
-
-        rootLayout.addView(
-            actionButton,
-            createLayoutParams(
-                0,
-                18
-            )
-        )
-    }
-
-    private fun changePassword() {
-
-        val currentCredential =
-            verifiedCurrentCredential
-
-        if (
-            currentCredential == null
-        ) {
-
-            showMessage(
-                "Verify your current credential first"
-            )
-
-            return
-        }
-
-        val newPassword =
-            passwordInput
-                ?.text
-                ?.toString()
-                ?: ""
-
-        val confirmPassword =
-            confirmInput
-                ?.text
-                ?.toString()
-                ?: ""
-
-        if (
-            newPassword.length < 4
-        ) {
-
-            showMessage(
-                "Password must contain at least 4 characters"
-            )
-
-            return
-        }
-
-        if (
-            newPassword.length > 64
-        ) {
-
-            showMessage(
-                "Password is too long"
-            )
-
-            return
-        }
-
-        if (
-            newPassword !=
-                confirmPassword
-        ) {
-
-            showMessage(
-                "Passwords do not match"
-            )
-
-            return
-        }
-
-        try {
-
-            authenticationManager
-                .changePassword(
-                    lockType,
-                    currentCredential,
-                    newPassword
-                )
-
-            LockSessionManager.clearAll()
-
-            showMessage(
-                "Password changed successfully"
-            )
-
-            finish()
-
-        } catch (
-            exception: Exception
-        ) {
-
-            showMessage(
-                exception.message
-                    ?: "Unable to change password"
-            )
-        }
-    }
-
-    /*
-     * =========================================================
-     * NEW PATTERN - SCREEN 2
-     * =========================================================
-     *
-     * Only NEW PATTERN is shown here.
-     *
-     * Confirm Pattern is deliberately NOT shown
-     * on this screen.
-     *
-     * =========================================================
-     */
-
-    private fun createNewPatternInput() {
-
-        pendingNewPattern = null
-        confirmPatternView = null
-
-        addSimpleText(
-            "New Pattern",
-            16,
-            Color.rgb(
-                230,
-                230,
-                230
-            ),
-            18
-        )
-
-        addSimpleText(
-            "Draw your new pattern",
-            14,
-            Color.rgb(
-                165,
-                165,
-                165
-            ),
-            8
-        )
-
-        patternView =
-            PatternView(
-                this
-            )
-
-        val patternContainer =
-            LinearLayout(this).apply {
-
-                orientation =
-                    LinearLayout.VERTICAL
-
-                gravity =
-                    Gravity.CENTER
-
-                background =
-                    createRoundedBackground(
-                        Color.rgb(
-                            20,
-                            20,
-                            20
-                        ),
-                        dp(22).toFloat()
-                    )
-
-                setPadding(
-                    dp(12),
-                    dp(12),
-                    dp(12),
-                    dp(12)
-                )
-            }
-
-        patternContainer.addView(
-            patternView,
-            LinearLayout.LayoutParams(
-                dp(290),
-                dp(290)
-            )
-        )
-
-        rootLayout.addView(
-            patternContainer,
-            LinearLayout.LayoutParams(
-                dp(314),
-                dp(314)
-            ).apply {
-
-                gravity =
-                    Gravity.CENTER
-
-                topMargin =
-                    dp(12)
-            }
-        )
-
-        addSimpleText(
-            "Use at least 4 points",
-            12,
-            Color.rgb(
-                120,
-                120,
-                120
-            ),
-            8
-        )
-
-        actionButton =
-            createButton(
-                "Continue"
-            )
-
-        actionButton.setOnClickListener {
-
-            continueToConfirmPattern()
-        }
-
-        rootLayout.addView(
-            actionButton,
-            createLayoutParams(
-                0,
-                18
-            )
-        )
-    }
-
-    /*
-     * =========================================================
-     * PATTERN SCREEN 2 -> SCREEN 3
-     * =========================================================
-     */
-
-    private fun continueToConfirmPattern() {
-
-        val newPattern =
-            patternView
-                ?.getPatternString()
-                ?: ""
-
-        if (
-            newPattern.length < 4
-        ) {
-
-            showMessage(
-                "Pattern must contain at least 4 points"
-            )
-
-            return
-        }
-
-        pendingNewPattern =
-            newPattern
-
-        showConfirmPatternScreen()
-    }
-
-    /*
-     * =========================================================
-     * CONFIRM PATTERN - SCREEN 3
-     * =========================================================
-     *
-     * Only confirmation pattern is shown.
-     *
-     * =========================================================
-     */
-
-    private fun showConfirmPatternScreen() {
-
-        val newPattern =
-            pendingNewPattern
-
-        if (
-            newPattern.isNullOrEmpty()
-        ) {
-
-            showMessage(
-                "Create your new pattern first"
-            )
-
-            return
-        }
-
-        patternView = null
-        confirmPatternView = null
-
-        rootLayout =
-            createRootLayout()
-
-        addHeader(
-            "Confirm Pattern",
-            "Draw the same pattern again"
-        )
-
-        addSimpleText(
-            "Confirm your new pattern",
-            16,
-            Color.rgb(
-                230,
-                230,
-                230
-            ),
-            18
-        )
-
-        confirmPatternView =
-            PatternView(
-                this
-            )
-
-        val confirmPatternContainer =
-            LinearLayout(this).apply {
-
-                orientation =
-                    LinearLayout.VERTICAL
-
-                gravity =
-                    Gravity.CENTER
-
-                background =
-                    createRoundedBackground(
-                        Color.rgb(
-                            20,
-                            20,
-                            20
-                        ),
-                        dp(22).toFloat()
-                    )
-
-                setPadding(
-                    dp(12),
-                    dp(12),
-                    dp(12),
-                    dp(12)
-                )
-            }
-
-        confirmPatternContainer.addView(
-            confirmPatternView,
-            LinearLayout.LayoutParams(
-                dp(290),
-                dp(290)
-            )
-        )
-
-        rootLayout.addView(
-            confirmPatternContainer,
-            LinearLayout.LayoutParams(
-                dp(314),
-                dp(314)
-            ).apply {
-
-                gravity =
-                    Gravity.CENTER
-
-                topMargin =
-                    dp(12)
-            }
-        )
-
-        addSimpleText(
-            "Draw the same pattern again",
-            12,
-            Color.rgb(
-                120,
-                120,
-                120
-            ),
-            8
-        )
-
-        actionButton =
-            createButton(
-                "Change Pattern"
-            )
-
-        actionButton.setOnClickListener {
-
-            changePattern()
-        }
-
-        rootLayout.addView(
-            actionButton,
-            createLayoutParams(
-                0,
-                18
-            )
-        )
-
-        addTargetPackage()
-
-        setContentView(
-            rootLayout
-        )
-    }
-
-    /*
-     * =========================================================
-     * SAVE CHANGED PATTERN
-     * =========================================================
-     */
-
-    private fun changePattern() {
-
-        val currentCredential =
-            verifiedCurrentCredential
-
-        if (
-            currentCredential == null
-        ) {
-
-            showMessage(
-                "Verify your current credential first"
-            )
-
-            return
-        }
-
-        val newPattern =
-            pendingNewPattern
-                ?: ""
-
-        val confirmPattern =
-            confirmPatternView
-                ?.getPatternString()
-                ?: ""
-
-        if (
-            newPattern.length < 4
-        ) {
-
-            showMessage(
-                "New pattern must contain at least 4 points"
-            )
-
-            return
-        }
-
-        if (
-            confirmPattern.length < 4
-        ) {
-
-            showMessage(
-                "Draw the pattern again to confirm"
-            )
-
-            return
-        }
-
-        if (
-            newPattern !=
-                confirmPattern
-        ) {
-
-            confirmPatternView
-                ?.clearPattern()
-
-            showMessage(
-                "Patterns do not match"
-            )
-
-            return
-        }
-
-        try {
-
-            /*
-             * IMPORTANT:
-             *
-             * The active lock type changes to Pattern
-             * only inside AuthenticationManager after
-             * the current credential has been verified
-             * and the new pattern is valid.
-             */
-
-            authenticationManager
-                .changePattern(
-                    lockType,
-                    currentCredential,
-                    newPattern
-                )
-
-            pendingNewPattern = null
-
-            LockSessionManager.clearAll()
-
-            showMessage(
-                "Pattern changed successfully"
-            )
-
-            finish()
-
-        } catch (
-            exception: Exception
-        ) {
-
-            showMessage(
-                exception.message
-                    ?: "Unable to change pattern"
-            )
         }
     }
 
@@ -1795,11 +1738,8 @@ class LockActivity : Activity() {
             if (
                 isCreatingCredential
             ) {
-
                 createPin()
-
             } else {
-
                 verifyPin()
             }
         }
@@ -2016,11 +1956,8 @@ class LockActivity : Activity() {
             if (
                 isCreatingCredential
             ) {
-
                 createPassword()
-
             } else {
-
                 verifyPassword()
             }
         }
@@ -2167,59 +2104,16 @@ class LockActivity : Activity() {
             22
         )
 
-        val patternContainer =
-            LinearLayout(this).apply {
-
-                orientation =
-                    LinearLayout.VERTICAL
-
-                gravity =
-                    Gravity.CENTER
-
-                background =
-                    createRoundedBackground(
-                        Color.rgb(
-                            20,
-                            20,
-                            20
-                        ),
-                        dp(22).toFloat()
-                    )
-
-                setPadding(
-                    dp(12),
-                    dp(12),
-                    dp(12),
-                    dp(12)
-                )
-            }
-
         patternView =
             PatternView(
                 this
             )
 
-        patternContainer.addView(
-            patternView,
-            LinearLayout.LayoutParams(
-                dp(290),
-                dp(290)
-            )
-        )
-
         rootLayout.addView(
-            patternContainer,
-            LinearLayout.LayoutParams(
-                dp(314),
-                dp(314)
-            ).apply {
-
-                gravity =
-                    Gravity.CENTER
-
-                topMargin =
-                    dp(10)
-            }
+            createPatternContainer(
+                patternView!!
+            ),
+            createPatternLayoutParams()
         )
 
         addSimpleText(
@@ -2249,11 +2143,8 @@ class LockActivity : Activity() {
             if (
                 isCreatingCredential
             ) {
-
                 createPattern()
-
             } else {
-
                 verifyPattern()
             }
         }
@@ -2346,10 +2237,6 @@ class LockActivity : Activity() {
     /*
      * =========================================================
      * BIOMETRIC
-     * =========================================================
-     *
-     * Biometric behavior intentionally left unchanged.
-     *
      * =========================================================
      */
 
@@ -2537,9 +2424,20 @@ class LockActivity : Activity() {
 
     /*
      * =========================================================
-     * ROOT UI
+     * UI HELPERS
      * =========================================================
      */
+
+    private fun clearInputReferences() {
+
+        pinInput = null
+        passwordInput = null
+        confirmInput = null
+        patternView = null
+        confirmPatternView = null
+        currentCredentialInput = null
+        currentPatternView = null
+    }
 
     private fun createRootLayout():
         LinearLayout {
@@ -2701,7 +2599,6 @@ class LockActivity : Activity() {
         if (
             targetPackage.isEmpty()
         ) {
-
             return
         }
 
@@ -2734,12 +2631,6 @@ class LockActivity : Activity() {
             )
         )
     }
-
-    /*
-     * =========================================================
-     * INPUT UI
-     * =========================================================
-     */
 
     private fun createInputContainer():
         LinearLayout {
@@ -2863,6 +2754,61 @@ class LockActivity : Activity() {
 
             stateListAnimator =
                 null
+        }
+    }
+
+    private fun createPatternContainer(
+        pattern: PatternView
+    ): LinearLayout {
+
+        return LinearLayout(this).apply {
+
+            orientation =
+                LinearLayout.VERTICAL
+
+            gravity =
+                Gravity.CENTER
+
+            background =
+                createRoundedBackground(
+                    Color.rgb(
+                        20,
+                        20,
+                        20
+                    ),
+                    dp(22).toFloat()
+                )
+
+            setPadding(
+                dp(12),
+                dp(12),
+                dp(12),
+                dp(12)
+            )
+
+            addView(
+                pattern,
+                LinearLayout.LayoutParams(
+                    dp(290),
+                    dp(290)
+                )
+            )
+        }
+    }
+
+    private fun createPatternLayoutParams():
+        LinearLayout.LayoutParams {
+
+        return LinearLayout.LayoutParams(
+            dp(314),
+            dp(314)
+        ).apply {
+
+            gravity =
+                Gravity.CENTER
+
+            topMargin =
+                dp(8)
         }
     }
 
@@ -3363,7 +3309,6 @@ class LockActivity : Activity() {
                         index
                     )
                 ) {
-
                     continue
                 }
 

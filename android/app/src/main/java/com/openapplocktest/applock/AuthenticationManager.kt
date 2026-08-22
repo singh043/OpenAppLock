@@ -99,20 +99,6 @@ class AuthenticationManager(
      * ---------------------------------------------------------
      * GENERIC CURRENT CREDENTIAL VERIFICATION
      * ---------------------------------------------------------
-     *
-     * Used when changing lock type.
-     *
-     * Example:
-     *
-     * Current lock = PIN
-     * New lock     = Pattern
-     *
-     * verifyCredential(
-     *     PIN,
-     *     current PIN
-     * )
-     *
-     * ---------------------------------------------------------
      */
 
     fun verifyCredential(
@@ -220,19 +206,56 @@ class AuthenticationManager(
         )
     }
 
+    /*
+     * ---------------------------------------------------------
+     * CHANGE PIN
+     * ---------------------------------------------------------
+     *
+     * Existing method:
+     *
+     * PIN -> PIN
+     *
+     * Generic method:
+     *
+     * Pattern -> PIN
+     * Password -> PIN
+     * PIN -> PIN
+     *
+     * The current credential is verified first.
+     *
+     * Only after successful verification and
+     * validation is the new PIN + active lock type
+     * saved.
+     * ---------------------------------------------------------
+     */
+
     fun changePin(
         currentPin: String,
         newPin: String
     ) {
 
+        changePin(
+            LOCK_TYPE_PIN,
+            currentPin,
+            newPin
+        )
+    }
+
+    fun changePin(
+        currentLockType: String,
+        currentCredential: String,
+        newPin: String
+    ) {
+
         if (
-            !verifyPin(
-                currentPin
+            !verifyCredential(
+                currentLockType,
+                currentCredential
             )
         ) {
 
             throw IllegalArgumentException(
-                "Current PIN is incorrect"
+                "Current $currentLockType is incorrect"
             )
         }
 
@@ -250,11 +273,9 @@ class AuthenticationManager(
             )
 
         /*
-         * Credential + active lock type are saved
-         * together.
-         *
-         * If validation/current credential fails,
-         * nothing is changed.
+         * Save the new PIN and make PIN the active
+         * lock type only after the current credential
+         * has been successfully verified.
          */
         preferences
             .edit()
@@ -342,20 +363,6 @@ class AuthenticationManager(
      * ---------------------------------------------------------
      * CHANGE PASSWORD
      * ---------------------------------------------------------
-     *
-     * Current credential can be:
-     *
-     * PIN
-     * Pattern
-     * Password
-     *
-     * This is required because user can change:
-     *
-     * PIN -> Password
-     * Pattern -> Password
-     * Password -> Password
-     *
-     * ---------------------------------------------------------
      */
 
     fun changePassword(
@@ -389,11 +396,6 @@ class AuthenticationManager(
                 salt
             )
 
-        /*
-         * Save the new password and make Password
-         * the active lock type only after the
-         * current credential has been verified.
-         */
         preferences
             .edit()
             .putString(
@@ -480,20 +482,6 @@ class AuthenticationManager(
      * ---------------------------------------------------------
      * CHANGE PATTERN
      * ---------------------------------------------------------
-     *
-     * Current credential can be:
-     *
-     * PIN
-     * Pattern
-     * Password
-     *
-     * Examples:
-     *
-     * PIN -> Pattern
-     * Pattern -> Pattern
-     * Password -> Pattern
-     *
-     * ---------------------------------------------------------
      */
 
     fun changePattern(
@@ -527,11 +515,6 @@ class AuthenticationManager(
                 salt
             )
 
-        /*
-         * Save new pattern and active lock type
-         * together after current credential
-         * verification succeeds.
-         */
         preferences
             .edit()
             .putString(
@@ -556,15 +539,6 @@ class AuthenticationManager(
     /*
      * ---------------------------------------------------------
      * CHANGE CURRENT CREDENTIAL WITHOUT CHANGING TYPE
-     * ---------------------------------------------------------
-     *
-     * These methods are useful for:
-     *
-     * Change PIN
-     * Change Pattern
-     * Change Password
-     *
-     * when the selected type remains the same.
      * ---------------------------------------------------------
      */
 

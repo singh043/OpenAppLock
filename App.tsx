@@ -1431,7 +1431,7 @@ function App(): React.JSX.Element {
       return (
         <TouchableOpacity
           style={styles.lockTypeOption}
-          disabled={loadingLockType}
+          disabled={loadingLockType || selected}
           onPress={() =>
             changeLockType(type)
           }>
