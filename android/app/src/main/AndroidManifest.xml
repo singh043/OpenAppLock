@@ -2,6 +2,9 @@
 
     <uses-permission android:name="android.permission.INTERNET" />
 
+    <uses-permission
+        android:name="android.permission.POST_NOTIFICATIONS" />
+
     <queries>
         <intent>
             <action android:name="android.intent.action.MAIN" />
@@ -51,12 +54,27 @@
             android:label="@string/accessibility_service_label">
 
             <intent-filter>
-                <action android:name="android.accessibilityservice.AccessibilityService" />
+                <action
+                    android:name="android.accessibilityservice.AccessibilityService" />
             </intent-filter>
 
             <meta-data
                 android:name="android.accessibilityservice"
                 android:resource="@xml/accessibility_service_config" />
+
+        </service>
+
+        <!-- AppLock Notification Listener -->
+        <service
+            android:name=".applock.AppLockNotificationListenerService"
+            android:label="OpenAppLock Notification Access"
+            android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE"
+            android:exported="true">
+
+            <intent-filter>
+                <action
+                    android:name="android.service.notification.NotificationListenerService" />
+            </intent-filter>
 
         </service>
 

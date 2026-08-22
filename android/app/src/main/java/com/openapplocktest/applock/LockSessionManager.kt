@@ -1,25 +1,49 @@
 package com.openapplocktest.applock
 
 /**
- * Keeps track of the app that has been successfully
- * authenticated during the current unlock session.
+ * Keeps track of authentication during the current
+ * OpenAppLock session.
  *
- * This is intentionally in-memory.
+ * Everything is intentionally kept in memory.
  *
- * If the phone is restarted, the session is cleared.
+ * Therefore:
+ *
+ * - Phone restart clears authentication.
+ * - App process restart clears authentication.
+ * - No PIN is stored here.
+ *
+ * There are two independent authentication states:
+ *
+ * 1. Protected-app authentication
+ * 2. OpenAppLock settings authentication
  */
 object LockSessionManager {
 
     private var authenticatedPackage: String? = null
 
+    private var settingsAuthenticated =
+        false
+
+    /*
+     * ---------------------------------------------------------
+     * Protected application authentication
+     * ---------------------------------------------------------
+     */
+
     @Synchronized
-    fun authenticate(packageName: String) {
-        authenticatedPackage = packageName
+    fun authenticate(
+        packageName: String
+    ) {
+        authenticatedPackage =
+            packageName
     }
 
     @Synchronized
-    fun isAuthenticated(packageName: String): Boolean {
-        return authenticatedPackage == packageName
+    fun isAuthenticated(
+        packageName: String
+    ): Boolean {
+        return authenticatedPackage ==
+            packageName
     }
 
     @Synchronized
@@ -28,12 +52,45 @@ object LockSessionManager {
     }
 
     @Synchronized
-    fun clearIfDifferent(packageName: String) {
+    fun clearIfDifferent(
+        packageName: String
+    ) {
         if (
             authenticatedPackage != null &&
-            authenticatedPackage != packageName
+            authenticatedPackage !=
+                packageName
         ) {
             authenticatedPackage = null
         }
+    }
+
+    /*
+     * ---------------------------------------------------------
+     * OpenAppLock settings authentication
+     * ---------------------------------------------------------
+     */
+
+    @Synchronized
+    fun authenticateSettings() {
+        settingsAuthenticated =
+            true
+    }
+
+    @Synchronized
+    fun isSettingsAuthenticated():
+        Boolean {
+        return settingsAuthenticated
+    }
+
+    @Synchronized
+    fun clearSettingsAuthentication() {
+        settingsAuthenticated =
+            false
+    }
+
+    @Synchronized
+    fun clearAll() {
+        authenticatedPackage = null
+        settingsAuthenticated = false
     }
 }

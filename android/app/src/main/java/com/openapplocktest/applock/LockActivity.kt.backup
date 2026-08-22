@@ -1,0 +1,589 @@
+package com.openapplocktest.applock
+
+import android.app.Activity
+import android.content.Context
+import android.content.Intent
+import android.graphics.Color
+import android.os.Bundle
+import android.text.InputFilter
+import android.text.InputType
+import android.view.Gravity
+import android.widget.Button
+import android.widget.EditText
+import android.widget.LinearLayout
+import android.widget.TextView
+import android.widget.Toast
+
+class LockActivity : Activity() {
+
+    companion object {
+
+        const val EXTRA_TARGET_PACKAGE =
+            "target_package"
+    }
+
+    private lateinit var authenticationManager:
+        AuthenticationManager
+
+    private lateinit var pinInput:
+        EditText
+
+    private lateinit var confirmPinInput:
+        EditText
+
+    private lateinit var actionButton:
+        Button
+
+    private var targetPackage:
+        String = ""
+
+    override fun onCreate(
+        savedInstanceState: Bundle?
+    ) {
+        super.onCreate(
+            savedInstanceState
+        )
+
+        authenticationManager =
+            AuthenticationManager(
+                applicationContext
+            )
+
+        targetPackage =
+            intent.getStringExtra(
+                EXTRA_TARGET_PACKAGE
+            ) ?: ""
+
+        showAuthenticationScreen(
+            targetPackage
+        )
+    }
+
+    override fun onNewIntent(
+        intent: Intent?
+    ) {
+        super.onNewIntent(
+            intent
+        )
+
+        if (intent == null) {
+            return
+        }
+
+        setIntent(
+            intent
+        )
+
+        val newTargetPackage =
+            intent.getStringExtra(
+                EXTRA_TARGET_PACKAGE
+            )
+
+        if (
+            !newTargetPackage.isNullOrEmpty()
+        ) {
+
+            targetPackage =
+                newTargetPackage
+
+            showAuthenticationScreen(
+                targetPackage
+            )
+        }
+    }
+
+    /*
+     * ---------------------------------------------------------
+     * AUTHENTICATION SCREEN
+     * ---------------------------------------------------------
+     */
+
+    private fun showAuthenticationScreen(
+        targetPackage: String
+    ) {
+
+        val hasPin =
+            authenticationManager.hasPin()
+
+        val layout =
+            LinearLayout(this).apply {
+
+                orientation =
+                    LinearLayout.VERTICAL
+
+                gravity =
+                    Gravity.CENTER
+
+                setPadding(
+                    48,
+                    48,
+                    48,
+                    48
+                )
+
+                setBackgroundColor(
+                    Color.rgb(
+                        16,
+                        16,
+                        16
+                    )
+                )
+            }
+
+        val title =
+            TextView(this).apply {
+
+                text =
+                    if (hasPin) {
+                        "App Locked"
+                    } else {
+                        "Create AppLock PIN"
+                    }
+
+                textSize =
+                    28f
+
+                setTextColor(
+                    Color.WHITE
+                )
+
+                gravity =
+                    Gravity.CENTER
+            }
+
+        val message =
+            TextView(this).apply {
+
+                text =
+                    if (hasPin) {
+                        "Enter your AppLock PIN"
+                    } else {
+                        "Create a 4 or 6 digit PIN"
+                    }
+
+                textSize =
+                    16f
+
+                setTextColor(
+                    Color.LTGRAY
+                )
+
+                gravity =
+                    Gravity.CENTER
+            }
+
+        pinInput =
+            createPinInput()
+
+        layout.addView(
+            title
+        )
+
+        layout.addView(
+            message,
+            createLayoutParams(
+                24
+            )
+        )
+
+        layout.addView(
+            pinInput,
+            createLayoutParams(
+                24
+            )
+        )
+
+        if (hasPin) {
+
+            actionButton =
+                Button(this).apply {
+
+                    text =
+                        "Unlock"
+
+                    setOnClickListener {
+                        verifyPin()
+                    }
+                }
+
+            layout.addView(
+                actionButton,
+                createLayoutParams(
+                    24
+                )
+            )
+
+        } else {
+
+            confirmPinInput =
+                createPinInput()
+
+            confirmPinInput.hint =
+                "Confirm PIN"
+
+            layout.addView(
+                confirmPinInput,
+                createLayoutParams(
+                    24
+                )
+            )
+
+            actionButton =
+                Button(this).apply {
+
+                    text =
+                        "Create PIN"
+
+                    setOnClickListener {
+                        createPin()
+                    }
+                }
+
+            layout.addView(
+                actionButton,
+                createLayoutParams(
+                    24
+                )
+            )
+        }
+
+        val target =
+            TextView(this).apply {
+
+                text =
+                    if (
+                        targetPackage.isEmpty()
+                    ) {
+                        ""
+                    } else {
+                        targetPackage
+                    }
+
+                textSize =
+                    12f
+
+                setTextColor(
+                    Color.GRAY
+                )
+
+                gravity =
+                    Gravity.CENTER
+            }
+
+        layout.addView(
+            target,
+            createLayoutParams(
+                20
+            )
+        )
+
+        setContentView(
+            layout
+        )
+    }
+
+    private fun createPinInput():
+        EditText {
+
+        return EditText(this).apply {
+
+            hint =
+                "PIN"
+
+            textSize =
+                20f
+
+            gravity =
+                Gravity.CENTER
+
+            setTextColor(
+                Color.WHITE
+            )
+
+            setHintTextColor(
+                Color.GRAY
+            )
+
+            inputType =
+                InputType.TYPE_CLASS_NUMBER or
+                    InputType.TYPE_NUMBER_VARIATION_PASSWORD
+
+            filters =
+                arrayOf(
+                    InputFilter.LengthFilter(
+                        6
+                    )
+                )
+        }
+    }
+
+    /*
+     * ---------------------------------------------------------
+     * CREATE PIN
+     * ---------------------------------------------------------
+     */
+
+    private fun createPin() {
+
+        val pin =
+            pinInput
+                .text
+                .toString()
+
+        val confirmPin =
+            confirmPinInput
+                .text
+                .toString()
+
+        if (
+            pin.length != 4 &&
+            pin.length != 6
+        ) {
+
+            showMessage(
+                "PIN must contain 4 or 6 digits"
+            )
+
+            return
+        }
+
+        if (
+            !pin.all {
+                it.isDigit()
+            }
+        ) {
+
+            showMessage(
+                "PIN must contain only digits"
+            )
+
+            return
+        }
+
+        if (
+            pin != confirmPin
+        ) {
+
+            showMessage(
+                "PINs do not match"
+            )
+
+            return
+        }
+
+        try {
+
+            authenticationManager
+                .createPin(
+                    pin
+                )
+
+            LockSessionManager
+                .authenticate(
+                    targetPackage
+                )
+
+            cancelReplacementNotification()
+
+            showMessage(
+                "PIN created"
+            )
+
+            launchTargetApplication()
+
+        } catch (
+            exception: Exception
+        ) {
+
+            showMessage(
+                exception.message
+                    ?: "Unable to create PIN"
+            )
+        }
+    }
+
+    /*
+     * ---------------------------------------------------------
+     * VERIFY PIN
+     * ---------------------------------------------------------
+     */
+
+    private fun verifyPin() {
+
+        val pin =
+            pinInput
+                .text
+                .toString()
+
+        if (
+            pin.isEmpty()
+        ) {
+
+            showMessage(
+                "Enter your PIN"
+            )
+
+            return
+        }
+
+        if (
+            authenticationManager
+                .verifyPin(
+                    pin
+                )
+        ) {
+
+            LockSessionManager
+                .authenticate(
+                    targetPackage
+                )
+
+            cancelReplacementNotification()
+
+            showMessage(
+                "Unlocked"
+            )
+
+            launchTargetApplication()
+
+        } else {
+
+            pinInput
+                .text
+                .clear()
+
+            showMessage(
+                "Incorrect PIN"
+            )
+        }
+    }
+
+    /*
+     * ---------------------------------------------------------
+     * OPEN ORIGINAL APP
+     * ---------------------------------------------------------
+     */
+
+    private fun launchTargetApplication() {
+
+        if (
+            targetPackage.isEmpty()
+        ) {
+
+            finish()
+
+            return
+        }
+
+        try {
+
+            val launchIntent =
+                packageManager
+                    .getLaunchIntentForPackage(
+                        targetPackage
+                    )
+
+            if (
+                launchIntent == null
+            ) {
+
+                showMessage(
+                    "Unable to open the app"
+                )
+
+                finish()
+
+                return
+            }
+
+            launchIntent.addFlags(
+                Intent.FLAG_ACTIVITY_NEW_TASK or
+                    Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED
+            )
+
+            startActivity(
+                launchIntent
+            )
+
+            finish()
+
+        } catch (
+            exception: Exception
+        ) {
+
+            showMessage(
+                "Unable to open the app"
+            )
+
+            finish()
+        }
+    }
+
+    /*
+     * ---------------------------------------------------------
+     * REPLACEMENT NOTIFICATION
+     * ---------------------------------------------------------
+     */
+
+    private fun cancelReplacementNotification() {
+
+        try {
+
+            val notificationManager =
+                getSystemService(
+                    Context.NOTIFICATION_SERVICE
+                ) as android.app.NotificationManager
+
+            val hash =
+                targetPackage.hashCode() and
+                    0x7fffffff
+
+            val notificationId =
+                70000 +
+                    (hash % 10000)
+
+            notificationManager.cancel(
+                notificationId
+            )
+
+        } catch (
+            exception: Exception
+        ) {
+            /*
+             * Notification cancellation should never
+             * prevent the user from unlocking the app.
+             */
+        }
+    }
+
+    /*
+     * ---------------------------------------------------------
+     * UI HELPERS
+     * ---------------------------------------------------------
+     */
+
+    private fun createLayoutParams(
+        topMargin: Int
+    ): LinearLayout.LayoutParams {
+
+        return LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT,
+            LinearLayout.LayoutParams.WRAP_CONTENT
+        ).apply {
+
+            this.topMargin =
+                topMargin
+        }
+    }
+
+    private fun showMessage(
+        message: String
+    ) {
+
+        Toast.makeText(
+            this,
+            message,
+            Toast.LENGTH_SHORT
+        ).show()
+    }
+}
