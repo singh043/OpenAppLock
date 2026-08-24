@@ -657,14 +657,56 @@ class LockActivity : Activity() {
             )
         )
 
+        addSimpleText(
+            "Confirm New PIN",
+            15,
+            Color.rgb(
+                210,
+                210,
+                210
+            ),
+            18
+        )
+
+        val confirmContainer =
+            createInputContainer()
+
+        confirmInput =
+            createEditText(
+                "Confirm new PIN"
+            )
+
+        confirmInput?.inputType =
+            InputType.TYPE_CLASS_NUMBER or
+                InputType.TYPE_NUMBER_VARIATION_PASSWORD
+
+        confirmInput?.filters =
+            arrayOf(
+                InputFilter.LengthFilter(
+                    6
+                )
+            )
+
+        confirmContainer.addView(
+            confirmInput,
+            createInnerInputParams()
+        )
+
+        rootLayout.addView(
+            confirmContainer,
+            createLayoutParams(
+                0,
+                12
+            )
+        )
+
         actionButton =
             createButton(
-                "Continue"
+                "Change PIN"
             )
 
         actionButton.setOnClickListener {
-
-            continueToConfirmPin()
+            changePin()
         }
 
         rootLayout.addView(
@@ -673,6 +715,12 @@ class LockActivity : Activity() {
                 0,
                 18
             )
+        )
+
+        addTargetPackage()
+
+        setContentView(
+            rootLayout
         )
     }
 
@@ -801,97 +849,112 @@ class LockActivity : Activity() {
         )
     }
 
-private fun changePin() {
+    private fun changePin() {
 
-    val currentCredential =
-        verifiedCurrentCredential
+        val currentCredential =
+            verifiedCurrentCredential
 
-    val newPin =
-        pendingNewCredential
-            ?: ""
+        val newPin =
+            pinInput
+                ?.text
+                ?.toString()
+                ?: ""
 
-    val confirmPin =
-        confirmInput
-            ?.text
-            ?.toString()
-            ?: ""
+        val confirmPin =
+            confirmInput
+                ?.text
+                ?.toString()
+                ?: ""
 
-    if (
-        currentCredential == null
-    ) {
+        if (
+            currentCredential == null
+        ) {
 
-        showMessage(
-            "Verify your current credential first"
-        )
-
-        return
-    }
-
-    if (
-        newPin.length != 4 &&
-        newPin.length != 6
-    ) {
-
-        showMessage(
-            "PIN must contain 4 or 6 digits"
-        )
-
-        return
-    }
-
-    if (
-        newPin != confirmPin
-    ) {
-
-        confirmInput
-            ?.text
-            ?.clear()
-
-        showMessage(
-            "PINs do not match"
-        )
-
-        return
-    }
-
-    try {
-
-        /*
-         * Current PIN / Pattern / Password has already
-         * been verified on the previous screen.
-         *
-         * createPin() stores the new PIN and makes PIN
-         * the active lock type.
-         *
-         * Supports:
-         *
-         * PIN -> PIN
-         * Pattern -> PIN
-         * Password -> PIN
-         */
-        authenticationManager
-            .createPin(
-                newPin
+            showMessage(
+                "Verify your current credential first"
             )
 
-        LockSessionManager.clearAll()
+            return
+        }
 
-        showMessage(
-            "PIN changed successfully"
-        )
+        if (
+            newPin.length != 4 &&
+            newPin.length != 6
+        ) {
 
-        finish()
+            showMessage(
+                "PIN must contain 4 or 6 digits"
+            )
 
-    } catch (
-        exception: Exception
-    ) {
+            return
+        }
 
-        showMessage(
-            exception.message
-                ?: "Unable to change PIN"
-        )
+        if (
+            !newPin.all {
+                it.isDigit()
+            }
+        ) {
+
+            showMessage(
+                "PIN must contain only digits"
+            )
+
+            return
+        }
+
+        if (
+            newPin != confirmPin
+        ) {
+
+            confirmInput
+                ?.text
+                ?.clear()
+
+            showMessage(
+                "PINs do not match"
+            )
+
+            return
+        }
+
+        try {
+
+            /*
+             * Current PIN / Pattern / Password has already
+             * been verified on the previous screen.
+             *
+             * createPin() stores the new PIN and makes PIN
+             * the active lock type.
+             *
+             * Supports:
+             *
+             * PIN -> PIN
+             * Pattern -> PIN
+             * Password -> PIN
+             */
+            authenticationManager
+                .createPin(
+                    newPin
+                )
+
+            LockSessionManager.clearAll()
+
+            showMessage(
+                "PIN changed successfully"
+            )
+
+            finish()
+
+        } catch (
+            exception: Exception
+        ) {
+
+            showMessage(
+                exception.message
+                    ?: "Unable to change PIN"
+            )
+        }
     }
-}
 
     /*
      * =========================================================
@@ -944,14 +1007,56 @@ private fun changePin() {
             )
         )
 
+        addSimpleText(
+            "Confirm New Password",
+            15,
+            Color.rgb(
+                210,
+                210,
+                210
+            ),
+            18
+        )
+
+        val confirmContainer =
+            createInputContainer()
+
+        confirmInput =
+            createEditText(
+                "Confirm new password"
+            )
+
+        confirmInput?.inputType =
+            InputType.TYPE_CLASS_TEXT or
+                InputType.TYPE_TEXT_VARIATION_PASSWORD
+
+        confirmInput?.filters =
+            arrayOf(
+                InputFilter.LengthFilter(
+                    64
+                )
+            )
+
+        confirmContainer.addView(
+            confirmInput,
+            createInnerInputParams()
+        )
+
+        rootLayout.addView(
+            confirmContainer,
+            createLayoutParams(
+                0,
+                12
+            )
+        )
+
         actionButton =
             createButton(
-                "Continue"
+                "Change Password"
             )
 
         actionButton.setOnClickListener {
-
-            continueToConfirmPassword()
+            changePassword()
         }
 
         rootLayout.addView(
@@ -960,6 +1065,12 @@ private fun changePin() {
                 0,
                 18
             )
+        )
+
+        addTargetPackage()
+
+        setContentView(
+            rootLayout
         )
     }
 
@@ -1091,7 +1202,9 @@ private fun changePin() {
             verifiedCurrentCredential
 
         val newPassword =
-            pendingNewCredential
+            passwordInput
+                ?.text
+                ?.toString()
                 ?: ""
 
         val confirmPassword =
