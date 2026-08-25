@@ -1342,11 +1342,6 @@ function App(): React.JSX.Element {
               {item.appName}
             </Text>
 
-            <Text
-              style={styles.packageName}>
-              {item.packageName}
-            </Text>
-
           </View>
 
           <Switch
@@ -1392,15 +1387,6 @@ function App(): React.JSX.Element {
               {item.appName}
             </Text>
 
-            <Text
-              style={[
-                styles.packageName,
-                notificationDisabled &&
-                  styles.disabledPackageText,
-              ]}>
-              {item.packageName}
-            </Text>
-
           </View>
 
           <Switch
@@ -1440,11 +1426,6 @@ function App(): React.JSX.Element {
             <Text
               style={styles.appName}>
               {item.appName}
-            </Text>
-
-            <Text
-              style={styles.packageName}>
-              {item.packageName}
             </Text>
 
           </View>

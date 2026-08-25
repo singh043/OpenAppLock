@@ -18,8 +18,10 @@ import android.text.InputType
 import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
+import android.view.ViewGroup
 import android.widget.Button
 import android.widget.EditText
+import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
 
@@ -42,6 +44,9 @@ class LockActivity : Activity() {
 
     private lateinit var rootLayout:
         LinearLayout
+
+    private var changeFlowBackArrow:
+        View? = null
 
     private lateinit var actionButton:
         Button
@@ -367,6 +372,50 @@ class LockActivity : Activity() {
      * =========================================================
      */
 
+    private fun addChangeFlowBackArrow() {
+
+        changeFlowBackArrow
+            ?.let { existing ->
+                (existing.parent as? ViewGroup)
+                    ?.removeView(existing)
+            }
+
+        val arrow = BackArrowView(this)
+
+        arrow.setOnClickListener {
+            finish()
+        }
+
+        val density =
+            resources.displayMetrics.density
+
+        val size =
+            (48 * density).toInt()
+
+        val params =
+            FrameLayout.LayoutParams(
+                size,
+                size
+            )
+
+        params.gravity =
+            Gravity.TOP or Gravity.START
+
+        params.leftMargin =
+            (10 * density).toInt()
+
+        params.topMargin =
+            (10 * density).toInt()
+
+        addContentView(
+            arrow,
+            params
+        )
+
+        changeFlowBackArrow =
+            arrow
+    }
+
     private fun showCurrentCredentialScreen() {
 
         clearInputReferences()
@@ -430,6 +479,8 @@ class LockActivity : Activity() {
                 rootLayout
             )
 
+            addChangeFlowBackArrow()
+
             return
         }
 
@@ -465,6 +516,8 @@ class LockActivity : Activity() {
         setContentView(
             rootLayout
         )
+
+        addChangeFlowBackArrow()
     }
 
     private fun verifyCurrentCredentialAndContinue() {
@@ -604,6 +657,8 @@ class LockActivity : Activity() {
         setContentView(
             rootLayout
         )
+
+        addChangeFlowBackArrow()
     }
 
     /*
@@ -1456,6 +1511,8 @@ class LockActivity : Activity() {
         setContentView(
             rootLayout
         )
+
+        addChangeFlowBackArrow()
     }
 
     private fun changePattern() {
@@ -3486,4 +3543,63 @@ class LockActivity : Activity() {
             invalidate()
         }
     }
+    private class BackArrowView(
+        context: Context
+    ) : View(context) {
+
+        // Same visual geometry as chevron_left.xml:
+        // M15,5 L8,12 L15,19, with a 2dp rounded white stroke.
+        private val paint =
+            Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = Color.WHITE
+                style = Paint.Style.STROKE
+                strokeWidth =
+                    2f * resources.displayMetrics.density
+                strokeCap = Paint.Cap.ROUND
+                strokeJoin = Paint.Join.ROUND
+            }
+
+        override fun onDraw(canvas: Canvas) {
+            super.onDraw(canvas)
+
+            val d =
+                resources.displayMetrics.density
+
+            // Draw the 24dp chevron centered inside the 48dp touch area.
+            val offset =
+                12f * d
+
+            val tipX =
+                offset + 8f * d
+
+            val endX =
+                offset + 15f * d
+
+            val topY =
+                offset + 5f * d
+
+            val centerY =
+                offset + 12f * d
+
+            val bottomY =
+                offset + 19f * d
+
+            canvas.drawLine(
+                endX,
+                topY,
+                tipX,
+                centerY,
+                paint
+            )
+
+            canvas.drawLine(
+                tipX,
+                centerY,
+                endX,
+                bottomY,
+                paint
+            )
+        }
+    }
+
 }
