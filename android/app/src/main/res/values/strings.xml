@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">OpenAppLockTest</string>
+    <string name="accessibility_service_label">OpenAppLock Accessibility Service</string>
+    <string name="accessibility_service_description">Allows OpenAppLock to detect when applications are opened so protected applications can be locked.</string>
 </resources>
