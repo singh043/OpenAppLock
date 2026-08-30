@@ -24,6 +24,13 @@ import {
   View,
 } from 'react-native';
 
+import { SvgUri } from 'react-native-svg';
+
+// Keep the SVG files as project assets. Metro loads them as asset resources,
+// while SvgUri renders the actual SVG instead of treating the asset number as a React component.
+const EYE_OFF_ICON = require('./assets/icons/eye_off_icon.svg');
+const EYE_ON_ICON = require('./assets/icons/eye_visible_icon.svg');
+
 type InstalledApp = {
   packageName: string;
   appName: string;
@@ -48,7 +55,7 @@ const {AppLockModule} = NativeModules;
 
 const IMMEDIATE = 'immediate';
 const AFTER_SCREEN_LOCK = 'after_screen_lock';
-
+// Eye icons are rendered from SVG assets (not PNG).
 const NAV_ICON_HOME = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAIAAAACACAYAAADDPmHLAAAABmJLR0QA/wD/AP+gvaeTAAAEEUlEQVR4nO3dPYtdVRjF8fWYMIRIYJSAA2mmmWYaq0ljZSrRYqxSDhbBRjBfIZ2dkDLa+AKSCIooEgsTBI2RCOIUNo5gY0AwGlHElwn5W0wuGZJJmDtnn/Ocuc/6fYC9n529YM7NOpcrmZmZmZmZmZmZmZmZmZmZmc0I4ABwFjgHHMyexwYEPAp8wF0XgSPZc9kAgAXgGvf7FjiWPZ/1CFgGftzh8id+Ap7MntN6AJwAbj7k8if+AJ7JntcaAtaAf3dx+RObwIvZc1tHQABngNtTXP52Z4HIPoftATAHvLnHi9/uAnAo+zw2BWAeuNzg8ie+AI5mn8t2AVgEvmt4+RPfA0vZ57OHAFaAn3u4/IlfgKeyz2k7AFaBv3q8/Im/gZPZ57VtgNPArQEuf+I2cCb73OVxt9DJ4iIpC/cXOllcJA2NBxc6WfZtkbTv/pcLWJb0saTF5FHudV3ScxGxnj3INB7JHmAawAlJVzS+y5ekY5I+x0VSP5i+0MniIqkluhc6WVwkdUW7QifLeUZeJI02ocC8pPclPZ09S0dXJD0fETeyB9nJKAMALGrrSX85eZRWNrT1CWEje5B7je5TALAi6SvNzuVL0pKkLxlhkTSqAACrkj6T9ETyKH04KulTRlYkjSYAwGlJ70k6nD1Ljw5JOs+IiqT0ZwDggKRXJb2cPcvAXpP0UkTcyhwiNQDAYUnvSFrNnCPRJ5JORsSfWQOkBQBYkPShpJWsGUZiXVufEK5nbJ4SAMZb6GRJK5IGfwhk3IVOlrQiadAAAGuSLkqaH3LffeKIpI8YuEgaJADcKXQkvSFpbog996mDks4xYJHU+ybAnKTXJa31vdeMuSDphYj4p89Neg3ADBU6WXovknoLwAwWOlk2JD0bET/0sXgvzwB3Cp2r8uW3sCTpal9FUvMAbCt0FlqvXVhvRVLTABQpdLL0UiQ1eQYoXOhkaVYkdQ6AC500TYqkFgG4Jhc6Wb6OiONdFmgRALquYXsXEZ3ucDRvBFkOB6A4B6A4B6A4B6A4B6A4B6A4B6A4B6A4B6A4B6A4B6A4B6A4B6A4B6A4B6A4B6A4B6A4B6C4Wfmxg98lDf1uYmgGvuY+Ky+FPh4RN4fcEHhM0m9D7rkTvxRqnTgAxTkAxTkAxTkAxTkAxTkAxTkAxTkAxTkAxTkAxTkAxTkAxTkAxTkAxTkAxTkAxTkAxTkAxTkAxTkAxTkAxTkAxTkAxTkAxTkAxTkA+1vnr+W1CED69+MK+7XrAi0CcLnBGrY3l7ou0CIAr0jabLCOTec/bf3bd9I5ABHxjaRTkjr/hJnt2qakUxGx3nWhJg+BEfGWpOOS3lWDv0v2QDe09aviKxHxdvYwZmZmZmZmZmZmZmZmZmZmNk7/A6nf9nTz53e7AAAAAElFTkSuQmCC';
 const NAV_ICON_LOCKED = 'data:image/png;base64,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';
 const NAV_ICON_HIDE = 'data:image/png;base64,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';
@@ -157,6 +164,15 @@ function App(): React.JSX.Element {
     useState('');
 
   const [changingPin, setChangingPin] =
+    useState(false);
+
+  const [showCurrentPin, setShowCurrentPin] =
+    useState(false);
+
+  const [showNewPin, setShowNewPin] =
+    useState(false);
+
+  const [showConfirmNewPin, setShowConfirmNewPin] =
     useState(false);
 
   const [appSearch, setAppSearch] =
@@ -700,6 +716,15 @@ function App(): React.JSX.Element {
         () => {
 
           if (
+            showChangePin
+          ) {
+
+            resetChangePinForm();
+
+            return true;
+          }
+
+          if (
             showLockTypeScreen
           ) {
 
@@ -719,6 +744,7 @@ function App(): React.JSX.Element {
     };
 
   }, [
+    showChangePin,
     showLockTypeScreen,
   ]);
 
@@ -1176,7 +1202,22 @@ function App(): React.JSX.Element {
       setCurrentPin('');
       setNewPin('');
       setConfirmNewPin('');
+      setShowCurrentPin(false);
+      setShowNewPin(false);
+      setShowConfirmNewPin(false);
       setShowChangePin(false);
+    };
+
+  const openChangePinScreen =
+    () => {
+
+      setCurrentPin('');
+      setNewPin('');
+      setConfirmNewPin('');
+      setShowCurrentPin(false);
+      setShowNewPin(false);
+      setShowConfirmNewPin(false);
+      setShowChangePin(true);
     };
 
   const handleChangePin =
@@ -1252,6 +1293,9 @@ function App(): React.JSX.Element {
         setCurrentPin('');
         setNewPin('');
         setConfirmNewPin('');
+        setShowCurrentPin(false);
+        setShowNewPin(false);
+        setShowConfirmNewPin(false);
         setShowChangePin(false);
 
         Alert.alert(
@@ -1271,6 +1315,55 @@ function App(): React.JSX.Element {
 
         setChangingPin(
           false,
+        );
+      }
+    };
+
+  const handleChangeCredentialType =
+    async (
+      type: LockType,
+    ) => {
+
+      try {
+
+        setLoadingLockType(
+          true,
+        );
+
+        await AppLockModule
+          .setLockType(
+            type,
+          );
+
+        lockTypeSetupInProgress.current =
+          type;
+
+        setShowChangePin(
+          false,
+        );
+
+        setShowLockTypeScreen(
+          false,
+        );
+
+        await AppLockModule
+          .openLockTypeSetup();
+
+      } catch (error: any) {
+
+        lockTypeSetupInProgress.current =
+          null;
+
+        setLoadingLockType(
+          false,
+        );
+
+        Alert.alert(
+          type === 'pattern'
+            ? 'Unable to change pattern'
+            : 'Unable to change password',
+          error?.message ||
+            'Unable to open credential setup.',
         );
       }
     };
@@ -1814,6 +1907,227 @@ function App(): React.JSX.Element {
   }
 
   if (
+    showChangePin
+  ) {
+
+    return (
+      <SafeAreaView
+        style={styles.container}>
+
+        <StatusBar
+          barStyle="light-content"
+        />
+
+        <View
+          style={styles.changePinScreen}>
+
+          <View
+            style={styles.changePinHeader}>
+
+            <TouchableOpacity
+              style={styles.changePinBackButton}
+              onPress={resetChangePinForm}>
+
+              <Text
+                style={styles.changePinBackText}>
+                ‹
+              </Text>
+
+            </TouchableOpacity>
+
+            <Text
+              style={styles.changePinScreenTitle}>
+              Change PIN
+            </Text>
+
+            <View
+              style={styles.changePinHeaderSpacer} />
+
+          </View>
+
+          <View
+            style={styles.changePinCard}>
+
+            <Text
+              style={styles.inputLabel}>
+              Current PIN
+            </Text>
+
+            <View
+              style={styles.pinInputWrapper}>
+
+              <TextInput
+                style={styles.changePinInput}
+                value={currentPin}
+                onChangeText={setCurrentPin}
+                keyboardType="number-pad"
+                secureTextEntry={!showCurrentPin}
+                maxLength={6}
+                placeholder="Enter current PIN"
+                placeholderTextColor="#777777"
+              />
+
+              <TouchableOpacity
+                style={styles.pinVisibilityButton}
+                onPress={() =>
+                  setShowCurrentPin(
+                    value => !value,
+                  )
+                }
+                accessibilityRole="button"
+                accessibilityLabel="Toggle current PIN visibility">
+
+                {!showCurrentPin ? (
+                  <SvgUri
+                    uri={Image.resolveAssetSource(EYE_OFF_ICON).uri}
+                    width={26}
+                    height={24}
+                  />
+                ) : (
+                  <SvgUri
+                    uri={Image.resolveAssetSource(EYE_ON_ICON).uri}
+                    width={32}
+                    height={24}
+                  />
+                )}
+
+              </TouchableOpacity>
+
+            </View>
+
+            <Text
+              style={styles.inputLabel}>
+              New PIN
+            </Text>
+
+            <View
+              style={styles.pinInputWrapper}>
+
+              <TextInput
+                style={styles.changePinInput}
+                value={newPin}
+                onChangeText={setNewPin}
+                keyboardType="number-pad"
+                secureTextEntry={!showNewPin}
+                maxLength={6}
+                placeholder="Enter new PIN"
+                placeholderTextColor="#777777"
+              />
+
+              <TouchableOpacity
+                style={styles.pinVisibilityButton}
+                onPress={() =>
+                  setShowNewPin(
+                    value => !value,
+                  )
+                }
+                accessibilityRole="button"
+                accessibilityLabel="Toggle new PIN visibility">
+
+                {!showNewPin ? (
+                  <SvgUri
+                    uri={Image.resolveAssetSource(EYE_OFF_ICON).uri}
+                    width={26}
+                    height={24}
+                  />
+                ) : (
+                  <SvgUri
+                    uri={Image.resolveAssetSource(EYE_ON_ICON).uri}
+                    width={32}
+                    height={24}
+                  />
+                )}
+
+              </TouchableOpacity>
+
+            </View>
+
+            <Text
+              style={styles.inputLabel}>
+              Confirm New PIN
+            </Text>
+
+            <View
+              style={styles.pinInputWrapper}>
+
+              <TextInput
+                style={styles.changePinInput}
+                value={confirmNewPin}
+                onChangeText={setConfirmNewPin}
+                keyboardType="number-pad"
+                secureTextEntry={!showConfirmNewPin}
+                maxLength={6}
+                placeholder="Confirm new PIN"
+                placeholderTextColor="#777777"
+              />
+
+              <TouchableOpacity
+                style={styles.pinVisibilityButton}
+                onPress={() =>
+                  setShowConfirmNewPin(
+                    value => !value,
+                  )
+                }
+                accessibilityRole="button"
+                accessibilityLabel="Toggle confirm PIN visibility">
+
+                {!showConfirmNewPin ? (
+                  <SvgUri
+                    uri={Image.resolveAssetSource(EYE_OFF_ICON).uri}
+                    width={26}
+                    height={24}
+                  />
+                ) : (
+                  <SvgUri
+                    uri={Image.resolveAssetSource(EYE_ON_ICON).uri}
+                    width={32}
+                    height={24}
+                  />
+                )}
+
+              </TouchableOpacity>
+
+            </View>
+
+            <View
+              style={styles.pinButtonRow}>
+
+              <TouchableOpacity
+                style={styles.cancelButton}
+                onPress={resetChangePinForm}>
+
+                <Text
+                  style={styles.cancelButtonText}>
+                  Cancel
+                </Text>
+
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.savePinButton}
+                onPress={handleChangePin}
+                disabled={changingPin}>
+
+                <Text
+                  style={styles.savePinButtonText}>
+                  {changingPin
+                    ? 'Changing...'
+                    : 'Change PIN'}
+                </Text>
+
+              </TouchableOpacity>
+
+            </View>
+
+          </View>
+
+        </View>
+
+      </SafeAreaView>
+    );
+  }
+
+  if (
     showLockNotification === null ||
     notificationAccessEnabled === null ||
     lockBehavior === null
@@ -2234,9 +2548,27 @@ function App(): React.JSX.Element {
 
                 <TouchableOpacity
                   style={styles.settingsRow}
-                  onPress={() =>
-                    setShowChangePin(true)
-                  }>
+                  onPress={() => {
+                    if (
+                      lockType === 'pattern'
+                    ) {
+                      handleChangeCredentialType(
+                        'pattern',
+                      );
+                      return;
+                    }
+
+                    if (
+                      lockType === 'password'
+                    ) {
+                      handleChangeCredentialType(
+                        'password',
+                      );
+                      return;
+                    }
+
+                    openChangePinScreen();
+                  }}>
 
                   <Image
                     source={{
@@ -2297,94 +2629,6 @@ function App(): React.JSX.Element {
 
               </View>
 
-              {showChangePin && (
-
-                <View
-                  style={styles.changePinPanel}>
-
-                  <Text
-                    style={styles.inputLabel}>
-                    Current PIN
-                  </Text>
-
-                  <TextInput
-                    style={styles.pinInput}
-                    value={currentPin}
-                    onChangeText={
-                      setCurrentPin
-                    }
-                    keyboardType="number-pad"
-                    secureTextEntry
-                    maxLength={6}
-                  />
-
-                  <Text
-                    style={styles.inputLabel}>
-                    New PIN
-                  </Text>
-
-                  <TextInput
-                    style={styles.pinInput}
-                    value={newPin}
-                    onChangeText={
-                      setNewPin
-                    }
-                    keyboardType="number-pad"
-                    secureTextEntry
-                    maxLength={6}
-                  />
-
-                  <Text
-                    style={styles.inputLabel}>
-                    Confirm New PIN
-                  </Text>
-
-                  <TextInput
-                    style={styles.pinInput}
-                    value={confirmNewPin}
-                    onChangeText={
-                      setConfirmNewPin
-                    }
-                    keyboardType="number-pad"
-                    secureTextEntry
-                    maxLength={6}
-                  />
-
-                  <View
-                    style={styles.pinButtonRow}>
-
-                    <TouchableOpacity
-                      style={styles.cancelButton}
-                      onPress={
-                        resetChangePinForm
-                      }>
-
-                      <Text
-                        style={styles.cancelButtonText}>
-                        Cancel
-                      </Text>
-
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                      style={styles.savePinButton}
-                      onPress={
-                        handleChangePin
-                      }>
-
-                      <Text
-                        style={styles.savePinButtonText}>
-                        {changingPin
-                          ? 'Changing...'
-                          : 'Change PIN'}
-                      </Text>
-
-                    </TouchableOpacity>
-
-                  </View>
-
-                </View>
-              )}
 
             </View>
           }
@@ -2747,6 +2991,115 @@ const styles =
       fontSize: 28,
       color: '#aaaaaa',
       paddingHorizontal: 6,
+    },
+
+    changePinScreen: {
+      flex: 1,
+      paddingHorizontal: 16,
+      justifyContent: 'center',
+    },
+
+    changePinHeader: {
+      width: '100%',
+      minHeight: 56,
+      marginBottom: 10,
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+    },
+
+    changePinBackButton: {
+      width: 44,
+      height: 44,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+
+    changePinBackText: {
+      fontSize: 34,
+      lineHeight: 38,
+      color: '#ffffff',
+      fontWeight: '300',
+    },
+
+    changePinScreenTitle: {
+      flex: 1,
+      marginHorizontal: 4,
+      fontSize: 21,
+      fontWeight: '700',
+      color: '#ffffff',
+      textAlign: 'center',
+    },
+
+    changePinHeaderSpacer: {
+      width: 44,
+      height: 44,
+    },
+
+    changePinCard: {
+      width: '100%',
+      paddingHorizontal: 12,
+      paddingVertical: 12,
+      borderRadius: 14,
+      backgroundColor: '#1c1c1c',
+    },
+
+    pinInputWrapper: {
+      position: 'relative',
+      width: '100%',
+    },
+
+    changePinInput: {
+      height: 48,
+      paddingLeft: 12,
+      paddingRight: 48,
+      borderRadius: 9,
+      backgroundColor: '#101010',
+      borderWidth: 1,
+      borderColor: '#3a3a3a',
+      color: '#ffffff',
+      fontSize: 15,
+    },
+
+    pinVisibilityButton: {
+      position: 'absolute',
+      right: 0,
+      top: 0,
+      width: 48,
+      height: 48,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+
+    eyeSvgIcon: {
+      width: 38,
+      height: 34,
+    },
+
+    eyeIcon: {
+      width: 20,
+      height: 13,
+      borderWidth: 1.8,
+      borderColor: '#ffffff',
+      borderRadius: 10,
+      alignItems: 'center',
+      justifyContent: 'center',
+      transform: [{rotate: '0deg'}],
+    },
+
+    eyePupil: {
+      width: 5,
+      height: 5,
+      borderRadius: 3,
+      backgroundColor: '#ffffff',
+    },
+
+    eyeSlash: {
+      position: 'absolute',
+      width: 24,
+      height: 1.8,
+      backgroundColor: '#ffffff',
+      transform: [{rotate: '45deg'}],
     },
 
     changePinPanel: {

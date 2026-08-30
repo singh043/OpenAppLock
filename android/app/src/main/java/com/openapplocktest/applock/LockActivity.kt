@@ -20,8 +20,8 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
-import android.widget.FrameLayout
 import android.widget.EditText
+import android.widget.FrameLayout
 import android.widget.LinearLayout
 import android.widget.TextView
 
@@ -37,15 +37,6 @@ class LockActivity : Activity() {
 
         const val EXTRA_NEW_LOCK_TYPE =
             "new_lock_type"
-
-        private const val AUTH_PREFS_NAME =
-            "applock_auth"
-
-        private const val KEY_LOCK_TYPE =
-            "lock_type"
-
-        private const val KEY_PENDING_LOCK_TYPE =
-            "pending_lock_type"
     }
 
     private lateinit var authenticationManager:
@@ -381,6 +372,50 @@ class LockActivity : Activity() {
      * =========================================================
      */
 
+    private fun addChangeFlowBackArrow() {
+
+        changeFlowBackArrow
+            ?.let { existing ->
+                (existing.parent as? ViewGroup)
+                    ?.removeView(existing)
+            }
+
+        val arrow = BackArrowView(this)
+
+        arrow.setOnClickListener {
+            finish()
+        }
+
+        val density =
+            resources.displayMetrics.density
+
+        val size =
+            (48 * density).toInt()
+
+        val params =
+            FrameLayout.LayoutParams(
+                size,
+                size
+            )
+
+        params.gravity =
+            Gravity.TOP or Gravity.START
+
+        params.leftMargin =
+            (10 * density).toInt()
+
+        params.topMargin =
+            (10 * density).toInt()
+
+        addContentView(
+            arrow,
+            params
+        )
+
+        changeFlowBackArrow =
+            arrow
+    }
+
     private fun showCurrentCredentialScreen() {
 
         clearInputReferences()
@@ -393,8 +428,6 @@ class LockActivity : Activity() {
 
         rootLayout =
             createRootLayout()
-
-        addChangeFlowBackButton()
 
         val currentType =
             authenticationManager
@@ -411,11 +444,11 @@ class LockActivity : Activity() {
 
             addHeader(
                 "Change ${displayLockType(newLockType)}",
-                "Use your biometric to confirm this change"
+                "Biometric changes will be handled later"
             )
 
             addSimpleText(
-                "Authenticate with your fingerprint or face to continue.",
+                "Biometric credential changes are not available yet.",
                 14,
                 Color.rgb(
                     165,
@@ -427,11 +460,11 @@ class LockActivity : Activity() {
 
             actionButton =
                 createButton(
-                    "Authenticate"
+                    "Back"
                 )
 
             actionButton.setOnClickListener {
-                authenticateBiometricForChange()
+                finish()
             }
 
             rootLayout.addView(
@@ -445,6 +478,8 @@ class LockActivity : Activity() {
             setContentView(
                 rootLayout
             )
+
+            addChangeFlowBackArrow()
 
             return
         }
@@ -481,6 +516,8 @@ class LockActivity : Activity() {
         setContentView(
             rootLayout
         )
+
+        addChangeFlowBackArrow()
     }
 
     private fun verifyCurrentCredentialAndContinue() {
@@ -546,15 +583,9 @@ class LockActivity : Activity() {
         rootLayout =
             createRootLayout()
 
-        addChangeFlowBackButton()
-
         addHeader(
             "New ${displayLockType(newLockType)}",
-            if (newLockType == AuthenticationManager.LOCK_TYPE_BIOMETRIC) {
-                ""
-            } else {
-                "Enter your new ${displayLockType(newLockType)}"
-            }
+            "Enter your new ${displayLockType(newLockType)}"
         )
 
         when (newLockType) {
@@ -581,7 +612,7 @@ class LockActivity : Activity() {
                 .LOCK_TYPE_BIOMETRIC -> {
 
                 addSimpleText(
-                    "Your biometric is already verified. Authenticate to enable biometric",
+                    "Biometric changes will be handled later.",
                     14,
                     Color.rgb(
                         165,
@@ -593,11 +624,11 @@ class LockActivity : Activity() {
 
                 actionButton =
                     createButton(
-                        "Authenticate"
+                        "Back"
                     )
 
                 actionButton.setOnClickListener {
-                    authenticateBiometricForSetup()
+                    finish()
                 }
 
                 rootLayout.addView(
@@ -606,13 +637,6 @@ class LockActivity : Activity() {
                         0,
                         20
                     )
-                )
-
-                window.decorView.postDelayed(
-                    {
-                        authenticateBiometricForSetup()
-                    },
-                    300
                 )
             }
 
@@ -633,6 +657,8 @@ class LockActivity : Activity() {
         setContentView(
             rootLayout
         )
+
+        addChangeFlowBackArrow()
     }
 
     /*
@@ -804,8 +830,6 @@ class LockActivity : Activity() {
 
         rootLayout =
             createRootLayout()
-
-        addChangeFlowBackButton()
 
         addHeader(
             "Confirm PIN",
@@ -1154,8 +1178,6 @@ class LockActivity : Activity() {
         rootLayout =
             createRootLayout()
 
-        addChangeFlowBackButton()
-
         addHeader(
             "Confirm Password",
             "Enter your new password again"
@@ -1424,8 +1446,6 @@ class LockActivity : Activity() {
         rootLayout =
             createRootLayout()
 
-        addChangeFlowBackButton()
-
         addHeader(
             "Confirm Pattern",
             "Draw the same pattern again"
@@ -1491,6 +1511,8 @@ class LockActivity : Activity() {
         setContentView(
             rootLayout
         )
+
+        addChangeFlowBackArrow()
     }
 
     private fun changePattern() {
@@ -2548,280 +2570,6 @@ class LockActivity : Activity() {
         )
     }
 
-    private fun authenticateBiometricForSetup() {
-
-        if (
-            Build.VERSION.SDK_INT < 28
-        ) {
-            showMessage(
-                "Biometric authentication is not supported on this Android version"
-            )
-
-            return
-        }
-
-        val biometricManager =
-            getSystemService(
-                Context.BIOMETRIC_SERVICE
-            ) as android.hardware.biometrics.BiometricManager
-
-        val canAuthenticate =
-            if (
-                Build.VERSION.SDK_INT >= 30
-            ) {
-                biometricManager.canAuthenticate(
-                    android.hardware.biometrics
-                        .BiometricManager
-                        .Authenticators
-                        .BIOMETRIC_WEAK
-                )
-            } else {
-                @Suppress(
-                    "DEPRECATION"
-                )
-                biometricManager.canAuthenticate()
-            }
-
-        if (
-            canAuthenticate !=
-                android.hardware.biometrics
-                    .BiometricManager
-                    .BIOMETRIC_SUCCESS
-        ) {
-            showMessage(
-                "Biometric authentication is not available"
-            )
-
-            return
-        }
-
-        val executor =
-            mainExecutor
-
-        val promptBuilder =
-            android.hardware.biometrics
-                .BiometricPrompt
-                .Builder(
-                    this
-                )
-                .setTitle(
-                    "OpenAppLock"
-                )
-                .setSubtitle(
-                    "Confirm biometric to enable AppLock"
-                )
-
-        promptBuilder.setNegativeButton(
-            "Cancel",
-            executor,
-            DialogInterface.OnClickListener {
-                _, _ ->
-            }
-        )
-
-        val prompt =
-            promptBuilder.build()
-
-        prompt.authenticate(
-            CancellationSignal(),
-            executor,
-            object :
-                android.hardware.biometrics
-                    .BiometricPrompt
-                    .AuthenticationCallback() {
-
-                override fun onAuthenticationSucceeded(
-                    result:
-                        android.hardware.biometrics
-                            .BiometricPrompt
-                            .AuthenticationResult
-                ) {
-
-                    super.onAuthenticationSucceeded(
-                        result
-                    )
-
-                    completeBiometricSetup()
-                }
-
-                override fun onAuthenticationError(
-                    errorCode: Int,
-                    errString: CharSequence
-                ) {
-
-                    super.onAuthenticationError(
-                        errorCode,
-                        errString
-                    )
-
-                    showMessage(
-                        errString.toString()
-                    )
-                }
-
-                override fun onAuthenticationFailed() {
-
-                    super.onAuthenticationFailed()
-
-                    showMessage(
-                        "Biometric not recognized"
-                    )
-                }
-            }
-        )
-    }
-
-    private fun completeBiometricSetup() {
-
-        val authenticationPreferences =
-            applicationContext.getSharedPreferences(
-                AUTH_PREFS_NAME,
-                Context.MODE_PRIVATE
-            )
-
-        authenticationPreferences
-            .edit()
-            .putString(
-                KEY_LOCK_TYPE,
-                AuthenticationManager
-                    .LOCK_TYPE_BIOMETRIC
-            )
-            .remove(
-                KEY_PENDING_LOCK_TYPE
-            )
-            .apply()
-
-        LockSessionManager.clearAll()
-
-        finish()
-    }
-
-    private fun authenticateBiometricForChange() {
-
-        if (
-            Build.VERSION.SDK_INT < 28
-        ) {
-            showMessage(
-                "Biometric authentication is not supported on this Android version"
-            )
-
-            return
-        }
-
-        val biometricManager =
-            getSystemService(
-                Context.BIOMETRIC_SERVICE
-            ) as android.hardware.biometrics.BiometricManager
-
-        val canAuthenticate =
-            if (
-                Build.VERSION.SDK_INT >= 30
-            ) {
-                biometricManager.canAuthenticate(
-                    android.hardware.biometrics
-                        .BiometricManager
-                        .Authenticators
-                        .BIOMETRIC_WEAK
-                )
-            } else {
-                @Suppress(
-                    "DEPRECATION"
-                )
-                biometricManager.canAuthenticate()
-            }
-
-        if (
-            canAuthenticate !=
-                android.hardware.biometrics
-                    .BiometricManager
-                    .BIOMETRIC_SUCCESS
-        ) {
-            showMessage(
-                "Biometric authentication is not available"
-            )
-
-            return
-        }
-
-        val executor =
-            mainExecutor
-
-        val promptBuilder =
-            android.hardware.biometrics
-                .BiometricPrompt
-                .Builder(
-                    this
-                )
-                .setTitle(
-                    "OpenAppLock"
-                )
-                .setSubtitle(
-                    "Authenticate to change lock type"
-                )
-
-        promptBuilder.setNegativeButton(
-            "Cancel",
-            executor,
-            DialogInterface.OnClickListener {
-                _, _ ->
-            }
-        )
-
-        val prompt =
-            promptBuilder.build()
-
-        prompt.authenticate(
-            CancellationSignal(),
-            executor,
-            object :
-                android.hardware.biometrics
-                    .BiometricPrompt
-                    .AuthenticationCallback() {
-
-                override fun onAuthenticationSucceeded(
-                    result:
-                        android.hardware.biometrics
-                            .BiometricPrompt
-                            .AuthenticationResult
-                ) {
-
-                    super.onAuthenticationSucceeded(
-                        result
-                    )
-
-                    verifiedCurrentCredential =
-                        "BIOMETRIC_VERIFIED"
-
-                    showNewCredentialScreen()
-                }
-
-                override fun onAuthenticationError(
-                    errorCode: Int,
-                    errString: CharSequence
-                ) {
-
-                    super.onAuthenticationError(
-                        errorCode,
-                        errString
-                    )
-
-                    showMessage(
-                        errString.toString()
-                    )
-                }
-
-                override fun onAuthenticationFailed() {
-
-                    super.onAuthenticationFailed()
-
-                    showMessage(
-                        "Biometric not recognized"
-                    )
-                }
-            }
-        )
-    }
-
     /*
      * =========================================================
      * SUCCESS
@@ -2889,129 +2637,6 @@ class LockActivity : Activity() {
         }
     }
 
-    private fun addChangeFlowBackButton() {
-
-        window.decorView.post {
-
-            changeFlowBackArrow
-                ?.let { existing ->
-                    (existing.parent as? ViewGroup)
-                        ?.removeView(existing)
-                }
-
-            val arrow = BackArrowView(this)
-
-            arrow.setOnClickListener {
-                finish()
-            }
-
-            val density =
-                resources.displayMetrics.density
-
-            val size =
-                (48 * density).toInt()
-
-            val params =
-                FrameLayout.LayoutParams(
-                    size,
-                    size
-                )
-
-            params.gravity =
-                Gravity.TOP or Gravity.START
-
-            params.leftMargin =
-                (10 * density).toInt()
-
-            params.topMargin =
-                (10 * density).toInt()
-
-            arrow.isClickable =
-                true
-
-            arrow.isFocusable =
-                true
-
-            arrow.visibility =
-                View.VISIBLE
-
-            arrow.alpha =
-                1f
-
-            arrow.elevation =
-                20f * density
-
-            addContentView(
-                arrow,
-                params
-            )
-
-            arrow.bringToFront()
-
-            changeFlowBackArrow =
-                arrow
-        }
-    }
-
-    private class BackArrowView(
-        context: Context
-    ) : View(context) {
-
-        private val paint =
-            Paint(Paint.ANTI_ALIAS_FLAG).apply {
-                color = Color.WHITE
-                style = Paint.Style.STROKE
-                strokeWidth =
-                    2f * resources.displayMetrics.density
-                strokeCap = Paint.Cap.ROUND
-                strokeJoin = Paint.Join.ROUND
-            }
-
-        override fun onDraw(
-            canvas: Canvas
-        ) {
-            super.onDraw(canvas)
-
-            val d =
-                resources.displayMetrics.density
-
-            // 24dp chevron centered in the 48dp touch area.
-            val offset =
-                12f * d
-
-            val tipX =
-                offset + 8f * d
-
-            val endX =
-                offset + 15f * d
-
-            val topY =
-                offset + 5f * d
-
-            val centerY =
-                offset + 12f * d
-
-            val bottomY =
-                offset + 19f * d
-
-            canvas.drawLine(
-                endX,
-                topY,
-                tipX,
-                centerY,
-                paint
-            )
-
-            canvas.drawLine(
-                tipX,
-                centerY,
-                endX,
-                bottomY,
-                paint
-            )
-        }
-    }
-
     private fun addHeader(
         titleText: String,
         subtitleText: String
@@ -3066,41 +2691,39 @@ class LockActivity : Activity() {
             )
         )
 
-        if (subtitleText.isNotBlank()) {
-            val subtitle =
-                TextView(this).apply {
+        val subtitle =
+            TextView(this).apply {
 
-                    text =
-                        subtitleText
+                text =
+                    subtitleText
 
-                    textSize =
-                        14f
+                textSize =
+                    14f
 
-                    setTextColor(
-                        Color.rgb(
-                            165,
-                            165,
-                            165
-                        )
+                setTextColor(
+                    Color.rgb(
+                        165,
+                        165,
+                        165
                     )
-
-                    gravity =
-                        Gravity.CENTER
-
-                    setLineSpacing(
-                        dp(2).toFloat(),
-                        1f
-                    )
-                }
-
-            rootLayout.addView(
-                subtitle,
-                createLayoutParams(
-                    0,
-                    8
                 )
+
+                gravity =
+                    Gravity.CENTER
+
+                setLineSpacing(
+                    dp(2).toFloat(),
+                    1f
+                )
+            }
+
+        rootLayout.addView(
+            subtitle,
+            createLayoutParams(
+                0,
+                8
             )
-        }
+        )
     }
 
     private fun addSimpleText(
@@ -3920,4 +3543,63 @@ class LockActivity : Activity() {
             invalidate()
         }
     }
+    private class BackArrowView(
+        context: Context
+    ) : View(context) {
+
+        // Same visual geometry as chevron_left.xml:
+        // M15,5 L8,12 L15,19, with a 2dp rounded white stroke.
+        private val paint =
+            Paint(Paint.ANTI_ALIAS_FLAG).apply {
+                color = Color.WHITE
+                style = Paint.Style.STROKE
+                strokeWidth =
+                    2f * resources.displayMetrics.density
+                strokeCap = Paint.Cap.ROUND
+                strokeJoin = Paint.Join.ROUND
+            }
+
+        override fun onDraw(canvas: Canvas) {
+            super.onDraw(canvas)
+
+            val d =
+                resources.displayMetrics.density
+
+            // Draw the 24dp chevron centered inside the 48dp touch area.
+            val offset =
+                12f * d
+
+            val tipX =
+                offset + 8f * d
+
+            val endX =
+                offset + 15f * d
+
+            val topY =
+                offset + 5f * d
+
+            val centerY =
+                offset + 12f * d
+
+            val bottomY =
+                offset + 19f * d
+
+            canvas.drawLine(
+                endX,
+                topY,
+                tipX,
+                centerY,
+                paint
+            )
+
+            canvas.drawLine(
+                tipX,
+                centerY,
+                endX,
+                bottomY,
+                paint
+            )
+        }
+    }
+
 }
