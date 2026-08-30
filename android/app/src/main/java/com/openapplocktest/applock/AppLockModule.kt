@@ -38,17 +38,6 @@ class AppLockModule(
         private const val KEY_LOCK_TYPE =
             "lock_type"
 
-        /*
-         * Temporary type selected from the React Native
-         * Change Lock Type screen.
-         *
-         * IMPORTANT:
-         *
-         * This is NOT the active lock type.
-         *
-         * It is only used to tell LockActivity which
-         * new authentication type the user wants to configure.
-         */
         private const val KEY_PENDING_LOCK_TYPE =
             "pending_lock_type"
 
@@ -93,6 +82,15 @@ class AppLockModule(
             Context.MODE_PRIVATE
         )
 
+    /*
+     * AuthenticationManager stores the actual
+     * authentication credentials and lock type
+     * in applock_auth.
+     *
+     * LockActivity also reads lock type from
+     * AuthenticationManager, so AppLockModule
+     * must use the same preference storage.
+     */
     private val authenticationPreferences =
         appContext.getSharedPreferences(
             AUTH_PREFS_NAME,
@@ -150,11 +148,12 @@ class AppLockModule(
             )
 
             /*
-             * AuthenticationManager.createPin()
-             * already makes PIN the active type.
+             * AuthenticationManager already sets
+             * PIN as the lock type when creating
+             * the first PIN.
              *
-             * Do not overwrite an existing active
-             * lock type.
+             * Do not overwrite an existing
+             * selected lock type.
              */
             if (
                 !authenticationPreferences.contains(
@@ -249,6 +248,18 @@ class AppLockModule(
      * ---------------------------------------------------------
      * LOCK TYPE
      * ---------------------------------------------------------
+     *
+     * Supported:
+     *
+     * pin
+     * pattern
+     * password
+     * biometric
+     *
+     * The lock type is stored in the same
+     * applock_auth preferences used by
+     * AuthenticationManager / LockActivity.
+     * ---------------------------------------------------------
      */
 
     @ReactMethod
@@ -265,7 +276,13 @@ class AppLockModule(
                 )
 
             /*
-             * Migration support for older versions.
+             * Migration support:
+             *
+             * An earlier version stored lock type
+             * in applock_settings.
+             *
+             * If it exists there and does not yet
+             * exist in applock_auth, migrate it.
              */
             if (
                 lockType.isNullOrEmpty()
@@ -306,35 +323,6 @@ class AppLockModule(
         }
     }
 
-    /*
-     * ---------------------------------------------------------
-     * SELECT NEW LOCK TYPE
-     * ---------------------------------------------------------
-     *
-     * IMPORTANT:
-     *
-     * This method does NOT immediately change the active
-     * lock type.
-     *
-     * Example:
-     *
-     * Current = Pattern
-     * User selects = Password
-     *
-     * We store:
-     *
-     * pending_lock_type = password
-     *
-     * but active lock_type remains:
-     *
-     * pattern
-     *
-     * Only after LockActivity successfully changes the
-     * credential will AuthenticationManager save Password
-     * as the active lock type.
-     * ---------------------------------------------------------
-     */
-
     @ReactMethod
     fun setLockType(
         lockType: String,
@@ -359,9 +347,16 @@ class AppLockModule(
             }
 
             /*
-             * Store only as pending selection.
+             * IMPORTANT:
+             * Do not make the new lock type active yet.
              *
-             * DO NOT modify KEY_LOCK_TYPE here.
+             * The user still has to verify the CURRENT
+             * credential and create the NEW credential.
+             * If we changed KEY_LOCK_TYPE here,
+             * LockActivity would think the new credential
+             * is already active and would show the normal
+             * authentication screen instead of the
+             * change-credential screen.
              */
             authenticationPreferences
                 .edit()
@@ -397,25 +392,33 @@ class AppLockModule(
     fun openLockTypeSetup(
         promise: Promise
     ) {
-
         try {
-
-            val pendingLockType =
-                authenticationPreferences
-                    .getString(
-                        KEY_PENDING_LOCK_TYPE,
-                        null
-                    )
-
-            if (
-                pendingLockType.isNullOrEmpty()
-            ) {
-
-                promise.reject(
-                    "NO_PENDING_LOCK_TYPE",
-                    "No lock type selected"
+            val pendingType =
+                authenticationPreferences.getString(
+                    KEY_PENDING_LOCK_TYPE,
+                    null
                 )
 
+            if (
+                pendingType.isNullOrEmpty()
+            ) {
+                promise.reject(
+                    "NO_PENDING_LOCK_TYPE",
+                    "No lock type change is pending."
+                )
+                return
+            }
+
+            if (
+                pendingType != LOCK_TYPE_PIN &&
+                pendingType != LOCK_TYPE_PATTERN &&
+                pendingType != LOCK_TYPE_PASSWORD &&
+                pendingType != LOCK_TYPE_BIOMETRIC
+            ) {
+                promise.reject(
+                    "INVALID_PENDING_LOCK_TYPE",
+                    "Invalid pending lock type."
+                )
                 return
             }
 
@@ -423,31 +426,19 @@ class AppLockModule(
                 Intent(
                     reactApplicationContext,
                     LockActivity::class.java
-                )
-
-            /*
-             * Tell LockActivity that this is a
-             * credential-change operation.
-             */
-            intent.putExtra(
-                LockActivity.EXTRA_CHANGE_CREDENTIAL,
-                true
-            )
-
-            /*
-             * Tell LockActivity exactly which new
-             * authentication type the user selected.
-             */
-            intent.putExtra(
-                LockActivity.EXTRA_NEW_LOCK_TYPE,
-                pendingLockType
-            )
-
-            intent.addFlags(
-                Intent.FLAG_ACTIVITY_NEW_TASK or
-                    Intent.FLAG_ACTIVITY_CLEAR_TOP or
-                    Intent.FLAG_ACTIVITY_SINGLE_TOP
-            )
+                ).apply {
+                    putExtra(
+                        LockActivity.EXTRA_CHANGE_CREDENTIAL,
+                        true
+                    )
+                    putExtra(
+                        LockActivity.EXTRA_NEW_LOCK_TYPE,
+                        pendingType
+                    )
+                    addFlags(
+                        Intent.FLAG_ACTIVITY_NEW_TASK
+                    )
+                }
 
             reactApplicationContext
                 .startActivity(
@@ -457,11 +448,9 @@ class AppLockModule(
             promise.resolve(
                 true
             )
-
         } catch (
             exception: Exception
         ) {
-
             promise.reject(
                 "OPEN_LOCK_TYPE_SETUP_ERROR",
                 exception.message,
@@ -470,56 +459,51 @@ class AppLockModule(
         }
     }
 
-    /*
-     * ---------------------------------------------------------
-     * CHECK LOCK TYPE SETUP RESULT
-     * ---------------------------------------------------------
-     *
-     * We check the ACTIVE lock type, not merely whether
-     * a credential exists.
-     *
-     * This is important because Pattern/Password may
-     * already have an old stored credential.
-     *
-     * Example:
-     *
-     * Active = PIN
-     * Pattern credential already exists
-     *
-     * User selects Pattern and presses Back.
-     *
-     * Result must be:
-     *
-     * false
-     *
-     * because Pattern was NOT made active.
-     * ---------------------------------------------------------
-     */
-
     @ReactMethod
     fun isLockTypeConfigured(
         lockType: String,
         promise: Promise
     ) {
-
         try {
-
-            val activeLockType =
-                authenticationManager
-                    .getLockType()
-
             val configured =
-                activeLockType ==
-                    lockType
+                when (lockType) {
+                    LOCK_TYPE_PIN ->
+                        authenticationManager.hasPin() &&
+                            authenticationManager.getLockType() ==
+                            LOCK_TYPE_PIN
+
+                    LOCK_TYPE_PATTERN ->
+                        authenticationManager.hasPattern() &&
+                            authenticationManager.getLockType() ==
+                            LOCK_TYPE_PATTERN
+
+                    LOCK_TYPE_PASSWORD ->
+                        authenticationManager.hasPassword() &&
+                            authenticationManager.getLockType() ==
+                            LOCK_TYPE_PASSWORD
+
+                    LOCK_TYPE_BIOMETRIC ->
+                        authenticationManager.getLockType() ==
+                            LOCK_TYPE_BIOMETRIC
+
+                    else -> false
+                }
+
+            if (configured) {
+                authenticationPreferences
+                    .edit()
+                    .remove(
+                        KEY_PENDING_LOCK_TYPE
+                    )
+                    .apply()
+            }
 
             promise.resolve(
                 configured
             )
-
         } catch (
             exception: Exception
         ) {
-
             promise.reject(
                 "LOCK_TYPE_CONFIGURED_ERROR",
                 exception.message,
@@ -528,7 +512,7 @@ class AppLockModule(
         }
     }
 
-    /*
+        /*
      * ---------------------------------------------------------
      * INSTALLED APPS
      * ---------------------------------------------------------

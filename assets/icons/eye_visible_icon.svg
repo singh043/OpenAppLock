@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg"
+     width="468" height="288" viewBox="0 0 468 288"
+     fill="none">
+  <rect width="468" height="288" fill="#000000"/>
+  <path
+    d="M38 144
+       C101 58 178 20 234 20
+       C290 20 367 58 430 144
+       C367 230 290 268 234 268
+       C178 268 101 230 38 144 Z"
+    stroke="#FFFFFF"
+    stroke-width="22"
+    stroke-linecap="round"
+    stroke-linejoin="round"/>
+  <circle
+    cx="234" cy="144" r="58"
+    stroke="#FFFFFF"
+    stroke-width="22"/>
+</svg>
