@@ -15,6 +15,8 @@ import android.os.Bundle
 import android.os.CancellationSignal
 import android.text.InputFilter
 import android.text.InputType
+import android.text.method.HideReturnsTransformationMethod
+import android.text.method.PasswordTransformationMethod
 import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
@@ -22,6 +24,7 @@ import android.view.ViewGroup
 import android.widget.Button
 import android.widget.EditText
 import android.widget.FrameLayout
+import android.widget.ImageButton
 import android.widget.LinearLayout
 import android.widget.TextView
 
@@ -699,9 +702,10 @@ class LockActivity : Activity() {
                 )
             )
 
-        container.addView(
-            pinInput,
-            createInnerInputParams()
+        addInputWithVisibilityToggle(
+            container,
+            pinInput!!,
+            true
         )
 
         rootLayout.addView(
@@ -742,9 +746,10 @@ class LockActivity : Activity() {
                 )
             )
 
-        confirmContainer.addView(
-            confirmInput,
-            createInnerInputParams()
+        addInputWithVisibilityToggle(
+            confirmContainer,
+            confirmInput!!,
+            true
         )
 
         rootLayout.addView(
@@ -866,9 +871,10 @@ class LockActivity : Activity() {
                 )
             )
 
-        container.addView(
-            confirmInput,
-            createInnerInputParams()
+        addInputWithVisibilityToggle(
+            container,
+            confirmInput!!,
+            true
         )
 
         rootLayout.addView(
@@ -1049,9 +1055,10 @@ class LockActivity : Activity() {
                 )
             )
 
-        container.addView(
-            passwordInput,
-            createInnerInputParams()
+        addInputWithVisibilityToggle(
+            container,
+            passwordInput!!,
+            false
         )
 
         rootLayout.addView(
@@ -1092,9 +1099,10 @@ class LockActivity : Activity() {
                 )
             )
 
-        confirmContainer.addView(
-            confirmInput,
-            createInnerInputParams()
+        addInputWithVisibilityToggle(
+            confirmContainer,
+            confirmInput!!,
+            false
         )
 
         rootLayout.addView(
@@ -1213,9 +1221,10 @@ class LockActivity : Activity() {
                 )
             )
 
-        container.addView(
-            confirmInput,
-            createInnerInputParams()
+        addInputWithVisibilityToggle(
+            container,
+            confirmInput!!,
+            false
         )
 
         rootLayout.addView(
@@ -1652,9 +1661,10 @@ class LockActivity : Activity() {
                         )
                     )
 
-                container.addView(
-                    currentCredentialInput,
-                    createInnerInputParams()
+                addInputWithVisibilityToggle(
+                    container,
+                    currentCredentialInput!!,
+                    true
                 )
 
                 rootLayout.addView(
@@ -1690,9 +1700,10 @@ class LockActivity : Activity() {
                         )
                     )
 
-                container.addView(
-                    currentCredentialInput,
-                    createInnerInputParams()
+                addInputWithVisibilityToggle(
+                    container,
+                    currentCredentialInput!!,
+                    false
                 )
 
                 rootLayout.addView(
@@ -2832,12 +2843,130 @@ class LockActivity : Activity() {
         }
     }
 
+    private fun addInputWithVisibilityToggle(
+        container: LinearLayout,
+        editText: EditText,
+        isPin: Boolean
+    ) {
+        val inputParams =
+            LinearLayout.LayoutParams(
+                0,
+                dp(58),
+                1f
+            )
+
+        container.addView(
+            editText,
+            inputParams
+        )
+
+        var visible = false
+
+        editText.transformationMethod =
+            PasswordTransformationMethod.getInstance()
+
+        val visibilityButton =
+            ImageButton(this).apply {
+                background = null
+                imageTintList = null
+                clearColorFilter()
+                setPadding(
+                    0,
+                    0,
+                    0,
+                    0
+                )
+                scaleType =
+                    android.widget.ImageView.ScaleType.CENTER_INSIDE
+                minimumWidth = dp(44)
+                minimumHeight = dp(44)
+                layoutParams =
+                    LinearLayout.LayoutParams(
+                        dp(44),
+                        dp(44)
+                    )
+                contentDescription =
+                    if (visible) {
+                        "Hide ${if (isPin) "PIN" else "password"}"
+                    } else {
+                        "Show ${if (isPin) "PIN" else "password"}"
+                    }
+            }
+
+        fun updateIcon() {
+            val iconName =
+                if (visible) {
+                    "eye_visible_icon_ui"
+                } else {
+                    "eye_off_icon_ui"
+                }
+
+            val iconResId =
+                resources.getIdentifier(
+                    iconName,
+                    "drawable",
+                    packageName
+                )
+
+            visibilityButton.imageTintList = null
+            visibilityButton.clearColorFilter()
+
+            if (iconResId != 0) {
+                visibilityButton.setImageResource(iconResId)
+            }
+            visibilityButton.visibility = View.VISIBLE
+            visibilityButton.alpha = 1f
+            visibilityButton.invalidate()
+
+            visibilityButton.contentDescription =
+                if (visible) {
+                    "Hide ${if (isPin) "PIN" else "password"}"
+                } else {
+                    "Show ${if (isPin) "PIN" else "password"}"
+                }
+        }
+
+        updateIcon()
+
+        visibilityButton.setOnClickListener {
+            visible = !visible
+            val selection = editText.selectionStart
+
+            editText.transformationMethod =
+                if (visible) {
+                    HideReturnsTransformationMethod.getInstance()
+                } else {
+                    PasswordTransformationMethod.getInstance()
+                }
+
+            val safeSelection =
+                selection.coerceIn(
+                    0,
+                    editText.text.length
+                )
+            editText.setSelection(safeSelection)
+            updateIcon()
+        }
+
+        container.addView(
+            visibilityButton,
+            LinearLayout.LayoutParams(
+                dp(52),
+                dp(58)
+            ).apply {
+                gravity =
+                    Gravity.CENTER_VERTICAL
+            }
+        )
+    }
+
     private fun createInnerInputParams():
         LinearLayout.LayoutParams {
 
         return LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.MATCH_PARENT,
-            dp(58)
+            0,
+            dp(58),
+            1f
         )
     }
 
@@ -2854,7 +2983,8 @@ class LockActivity : Activity() {
                 18f
 
             gravity =
-                Gravity.CENTER
+                Gravity.CENTER_VERTICAL or
+                    Gravity.START
 
             setTextColor(
                 Color.WHITE
@@ -3541,64 +3671,6 @@ class LockActivity : Activity() {
                 0f
 
             invalidate()
-        }
-    }
-    private class BackArrowView(
-        context: Context
-    ) : View(context) {
-
-        // Same visual geometry as chevron_left.xml:
-        // M15,5 L8,12 L15,19, with a 2dp rounded white stroke.
-        private val paint =
-            Paint(Paint.ANTI_ALIAS_FLAG).apply {
-                color = Color.WHITE
-                style = Paint.Style.STROKE
-                strokeWidth =
-                    2f * resources.displayMetrics.density
-                strokeCap = Paint.Cap.ROUND
-                strokeJoin = Paint.Join.ROUND
-            }
-
-        override fun onDraw(canvas: Canvas) {
-            super.onDraw(canvas)
-
-            val d =
-                resources.displayMetrics.density
-
-            // Draw the 24dp chevron centered inside the 48dp touch area.
-            val offset =
-                12f * d
-
-            val tipX =
-                offset + 8f * d
-
-            val endX =
-                offset + 15f * d
-
-            val topY =
-                offset + 5f * d
-
-            val centerY =
-                offset + 12f * d
-
-            val bottomY =
-                offset + 19f * d
-
-            canvas.drawLine(
-                endX,
-                topY,
-                tipX,
-                centerY,
-                paint
-            )
-
-            canvas.drawLine(
-                tipX,
-                centerY,
-                endX,
-                bottomY,
-                paint
-            )
         }
     }
 
