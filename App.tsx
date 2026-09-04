@@ -14,6 +14,7 @@ import {
   FlatList,
   Image,
   NativeModules,
+  requireNativeComponent,
   SafeAreaView,
   StatusBar,
   StyleSheet,
@@ -30,6 +31,8 @@ import { SvgUri } from 'react-native-svg';
 // while SvgUri renders the actual SVG instead of treating the asset number as a React component.
 const EYE_OFF_ICON = require('./assets/icons/eye_off_icon.svg');
 const EYE_ON_ICON = require('./assets/icons/eye_visible_icon.svg');
+const CHEVRON_LEFT_ICON = require('./assets/icons/chevron_left.svg');
+const NativeBackArrowView = requireNativeComponent('OpenAppLockBackArrow');
 
 type InstalledApp = {
   packageName: string;
@@ -150,6 +153,9 @@ function App(): React.JSX.Element {
 
   const [lockType, setLockType] =
     useState<LockType>('pin');
+
+  const lockTypeBeforeSetup =
+    useRef<LockType | null>(null);
 
   const [loadingLockType, setLoadingLockType] =
     useState(false);
@@ -441,6 +447,9 @@ function App(): React.JSX.Element {
 
           if (configured) {
 
+            lockTypeBeforeSetup.current =
+              null;
+
             setShowLockTypeScreen(
               false,
             );
@@ -452,6 +461,32 @@ function App(): React.JSX.Element {
             await loadMainData();
 
           } else {
+
+            const previousType =
+              lockTypeBeforeSetup.current;
+
+            if (
+              previousType &&
+              previousType !== setupType
+            ) {
+              try {
+                await AppLockModule
+                  .setLockType(
+                    previousType,
+                  );
+                setLockType(
+                  previousType,
+                );
+              } catch (restoreError) {
+                console.error(
+                  'Failed to restore previous lock type:',
+                  restoreError,
+                );
+              }
+            }
+
+            lockTypeBeforeSetup.current =
+              null;
 
             setLoadingLockType(
               false,
@@ -963,6 +998,9 @@ function App(): React.JSX.Element {
       }
 
       try {
+
+        lockTypeBeforeSetup.current =
+          lockType;
 
         setLoadingLockType(
           true,
@@ -1548,8 +1586,14 @@ function App(): React.JSX.Element {
 
       return (
         <TouchableOpacity
-          style={styles.lockTypeOption}
-          disabled={loadingLockType || selected}
+          style={[
+            styles.lockTypeOption,
+            selected &&
+              styles.lockTypeOptionCurrent,
+          ]}
+          disabled={
+            loadingLockType || selected
+          }
           onPress={() =>
             changeLockType(type)
           }>
@@ -1825,10 +1869,12 @@ function App(): React.JSX.Element {
               setShowLockTypeScreen(false)
             }>
 
-            <Text
-              style={styles.backButtonText}>
-              ‹
-            </Text>
+            <NativeBackArrowView
+              style={{
+                width: 48,
+                height: 48,
+              }}
+            />
 
           </TouchableOpacity>
 
@@ -1921,19 +1967,21 @@ function App(): React.JSX.Element {
         <View
           style={styles.changePinScreen}>
 
+          <TouchableOpacity
+            style={styles.changePinBackButton}
+            onPress={resetChangePinForm}>
+
+            <NativeBackArrowView
+              style={{
+                width: 48,
+                height: 48,
+              }}
+            />
+
+          </TouchableOpacity>
+
           <View
             style={styles.changePinHeader}>
-
-            <TouchableOpacity
-              style={styles.changePinBackButton}
-              onPress={resetChangePinForm}>
-
-              <Text
-                style={styles.changePinBackText}>
-                ‹
-              </Text>
-
-            </TouchableOpacity>
 
             <Text
               style={styles.changePinScreenTitle}>
@@ -3009,10 +3057,14 @@ const styles =
     },
 
     changePinBackButton: {
-      width: 44,
-      height: 44,
+      position: 'absolute',
+      left: 10,
+      top: 10,
+      width: 48,
+      height: 48,
       alignItems: 'center',
       justifyContent: 'center',
+      zIndex: 10,
     },
 
     changePinBackText: {
@@ -3449,8 +3501,9 @@ const styles =
     },
 
     backButton: {
-      width: 44,
-      height: 44,
+      width: 48,
+      height: 48,
+      marginLeft: -6,
       alignItems: 'center',
       justifyContent: 'center',
     },
@@ -3477,6 +3530,10 @@ const styles =
       fontSize: 14,
       lineHeight: 20,
       color: '#888888',
+    },
+
+    lockTypeOptionCurrent: {
+      opacity: 0.45,
     },
 
     lockTypeOption: {
