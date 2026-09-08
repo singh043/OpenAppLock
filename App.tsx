@@ -1262,12 +1262,14 @@ function App(): React.JSX.Element {
     async () => {
 
       if (
-        currentPin.length === 0
+        currentPin.length === 0 ||
+        newPin.length === 0 ||
+        confirmNewPin.length === 0
       ) {
 
         Alert.alert(
           'Change PIN',
-          'Enter your current PIN.',
+          'All fields are required.',
         );
 
         return;
@@ -1297,7 +1299,7 @@ function App(): React.JSX.Element {
 
         Alert.alert(
           'Change PIN',
-          'New PINs do not match.',
+          'New PIN and Confirm PIN do not match.',
         );
 
         return;
@@ -1310,7 +1312,7 @@ function App(): React.JSX.Element {
 
         Alert.alert(
           'Change PIN',
-          'New PIN must be different from the current PIN.',
+          'New PIN should be different from the current PIN.',
         );
 
         return;
@@ -3043,8 +3045,9 @@ const styles =
 
     changePinScreen: {
       flex: 1,
-      paddingHorizontal: 16,
+      paddingHorizontal: 32,
       justifyContent: 'center',
+      backgroundColor: '#0b0b0b',
     },
 
     changePinHeader: {
@@ -3075,8 +3078,9 @@ const styles =
     },
 
     changePinScreenTitle: {
-      flex: 1,
-      marginHorizontal: 4,
+      position: 'absolute',
+      left: 0,
+      right: 0,
       fontSize: 21,
       fontWeight: '700',
       color: '#ffffff',
@@ -3090,10 +3094,9 @@ const styles =
 
     changePinCard: {
       width: '100%',
-      paddingHorizontal: 12,
-      paddingVertical: 12,
-      borderRadius: 14,
-      backgroundColor: '#1c1c1c',
+      paddingHorizontal: 0,
+      paddingVertical: 0,
+      backgroundColor: 'transparent',
     },
 
     pinInputWrapper: {
@@ -3103,9 +3106,9 @@ const styles =
 
     changePinInput: {
       height: 48,
-      paddingLeft: 12,
+      paddingLeft: 14,
       paddingRight: 48,
-      borderRadius: 9,
+      borderRadius: 10,
       backgroundColor: '#101010',
       borderWidth: 1,
       borderColor: '#3a3a3a',
@@ -3552,10 +3555,10 @@ const styles =
     },
 
     inputLabel: {
-      marginTop: 12,
+      marginTop: 18,
       marginBottom: 6,
-      fontSize: 13,
-      color: '#aaaaaa',
+      fontSize: 15,
+      color: '#d2d2d2',
     },
 
     pinInput: {
@@ -3573,16 +3576,18 @@ const styles =
 
     pinButtonRow: {
       flexDirection: 'row',
-      marginTop: 16,
+      marginTop: 18,
       gap: 10,
     },
 
     cancelButton: {
       flex: 1,
-      paddingVertical: 13,
-      borderRadius: 8,
+      minHeight: 48,
+      paddingVertical: 0,
+      borderRadius: 12,
       backgroundColor: '#333333',
       alignItems: 'center',
+      justifyContent: 'center',
     },
 
     cancelButtonText: {
@@ -3593,16 +3598,20 @@ const styles =
 
     savePinButton: {
       flex: 1,
-      paddingVertical: 13,
-      borderRadius: 8,
+      minHeight: 48,
+      paddingVertical: 0,
+      borderRadius: 12,
       backgroundColor: '#ffffff',
       alignItems: 'center',
+      justifyContent: 'center',
     },
 
     savePinButtonText: {
       fontSize: 14,
       fontWeight: '600',
       color: '#101010',
+      textAlign: 'center',
+      width: '100%',
     },
 
     list: {
