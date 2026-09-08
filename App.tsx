@@ -154,6 +154,12 @@ function App(): React.JSX.Element {
   const [lockType, setLockType] =
     useState<LockType>('pin');
 
+  const [faceUnlockEnabled, setFaceUnlockEnabled] =
+    useState(false);
+
+  const [fingerprintUnlockEnabled, setFingerprintUnlockEnabled] =
+    useState(false);
+
   const lockTypeBeforeSetup =
     useRef<LockType | null>(null);
 
@@ -343,8 +349,7 @@ function App(): React.JSX.Element {
           if (
             type === 'pin' ||
             type === 'pattern' ||
-            type === 'password' ||
-            type === 'biometric'
+            type === 'password'
           ) {
 
             setLockType(
@@ -367,6 +372,47 @@ function App(): React.JSX.Element {
 
           setLockType(
             'pin',
+          );
+        }
+      },
+      [],
+    );
+
+  const loadBiometricSettings =
+    useCallback(
+      async () => {
+
+        try {
+
+          const settings =
+            await AppLockModule
+              .getBiometricSettings();
+
+          setFaceUnlockEnabled(
+            Boolean(
+              settings?.face,
+            ),
+          );
+
+          setFingerprintUnlockEnabled(
+            Boolean(
+              settings?.fingerprint,
+            ),
+          );
+
+        } catch (error) {
+
+          console.error(
+            'Failed to load biometric settings:',
+            error,
+          );
+
+          setFaceUnlockEnabled(
+            false,
+          );
+
+          setFingerprintUnlockEnabled(
+            false,
           );
         }
       },
@@ -412,6 +458,7 @@ function App(): React.JSX.Element {
           checkNotificationAccess(),
           loadLockBehavior(),
           loadLockType(),
+          loadBiometricSettings(),
         ]);
 
       },
@@ -421,6 +468,7 @@ function App(): React.JSX.Element {
         checkNotificationAccess,
         loadLockBehavior,
         loadLockType,
+        loadBiometricSettings,
       ],
     );
 
@@ -1075,6 +1123,56 @@ function App(): React.JSX.Element {
       }
     };
 
+  const toggleFaceUnlock =
+    async (
+      value: boolean,
+    ) => {
+
+      try {
+
+        await AppLockModule
+          .setFaceUnlockEnabled(
+            value,
+          );
+
+        setFaceUnlockEnabled(
+          value,
+        );
+
+      } catch (error) {
+
+        console.error(
+          'Failed to update face unlock setting:',
+          error,
+        );
+      }
+    };
+
+  const toggleFingerprintUnlock =
+    async (
+      value: boolean,
+    ) => {
+
+      try {
+
+        await AppLockModule
+          .setFingerprintUnlockEnabled(
+            value,
+          );
+
+        setFingerprintUnlockEnabled(
+          value,
+        );
+
+      } catch (error) {
+
+        console.error(
+          'Failed to update fingerprint unlock setting:',
+          error,
+        );
+      }
+    };
+
   const toggleNotificationSetting =
     async (
       value: boolean,
@@ -1262,12 +1360,14 @@ function App(): React.JSX.Element {
     async () => {
 
       if (
-        currentPin.length === 0
+        currentPin.length === 0 ||
+        newPin.length === 0 ||
+        confirmNewPin.length === 0
       ) {
 
         Alert.alert(
           'Change PIN',
-          'Enter your current PIN.',
+          'All fields are required.',
         );
 
         return;
@@ -1297,7 +1397,7 @@ function App(): React.JSX.Element {
 
         Alert.alert(
           'Change PIN',
-          'New PINs do not match.',
+          'New PIN and Confirm PIN do not match.',
         );
 
         return;
@@ -1310,7 +1410,7 @@ function App(): React.JSX.Element {
 
         Alert.alert(
           'Change PIN',
-          'New PIN must be different from the current PIN.',
+          'New PIN should be different from the current PIN.',
         );
 
         return;
@@ -1938,11 +2038,88 @@ function App(): React.JSX.Element {
                 'Unlock using a password.',
               )}
 
-              {renderLockTypeOption(
-                'biometric',
-                'Biometric',
-                'Use fingerprint or face authentication.',
-              )}
+              <Text
+                style={styles.biometricSectionTitle}>
+                Biometric
+              </Text>
+
+              <View
+                style={styles.biometricSection}>
+
+                <View
+                  style={styles.biometricRow}>
+
+                  <View
+                    style={styles.biometricInfo}>
+
+                    <Text
+                      style={styles.biometricTitle}>
+                      Face
+                    </Text>
+
+                    <Text
+                      style={styles.biometricDescription}>
+                      Unlock using face recognition.
+                    </Text>
+
+                  </View>
+
+                  <View
+                    style={styles.biometricDivider} />
+
+                  <Switch
+                    value={
+                      faceUnlockEnabled
+                    }
+                    disabled={
+                      loadingLockType
+                    }
+                    onValueChange={
+                      toggleFaceUnlock
+                    }
+                  />
+
+                </View>
+
+                <View
+                  style={styles.biometricSeparator} />
+
+                <View
+                  style={styles.biometricRow}>
+
+                  <View
+                    style={styles.biometricInfo}>
+
+                    <Text
+                      style={styles.biometricTitle}>
+                      Fingerprint
+                    </Text>
+
+                    <Text
+                      style={styles.biometricDescription}>
+                      Unlock using fingerprint.
+                    </Text>
+
+                  </View>
+
+                  <View
+                    style={styles.biometricDivider} />
+
+                  <Switch
+                    value={
+                      fingerprintUnlockEnabled
+                    }
+                    disabled={
+                      loadingLockType
+                    }
+                    onValueChange={
+                      toggleFingerprintUnlock
+                    }
+                  />
+
+                </View>
+
+              </View>
 
             </View>
           }
@@ -3043,8 +3220,9 @@ const styles =
 
     changePinScreen: {
       flex: 1,
-      paddingHorizontal: 16,
+      paddingHorizontal: 32,
       justifyContent: 'center',
+      backgroundColor: '#0b0b0b',
     },
 
     changePinHeader: {
@@ -3075,8 +3253,9 @@ const styles =
     },
 
     changePinScreenTitle: {
-      flex: 1,
-      marginHorizontal: 4,
+      position: 'absolute',
+      left: 0,
+      right: 0,
       fontSize: 21,
       fontWeight: '700',
       color: '#ffffff',
@@ -3090,10 +3269,9 @@ const styles =
 
     changePinCard: {
       width: '100%',
-      paddingHorizontal: 12,
-      paddingVertical: 12,
-      borderRadius: 14,
-      backgroundColor: '#1c1c1c',
+      paddingHorizontal: 0,
+      paddingVertical: 0,
+      backgroundColor: 'transparent',
     },
 
     pinInputWrapper: {
@@ -3103,9 +3281,9 @@ const styles =
 
     changePinInput: {
       height: 48,
-      paddingLeft: 12,
+      paddingLeft: 14,
       paddingRight: 48,
-      borderRadius: 9,
+      borderRadius: 10,
       backgroundColor: '#101010',
       borderWidth: 1,
       borderColor: '#3a3a3a',
@@ -3546,16 +3724,65 @@ const styles =
       alignItems: 'center',
     },
 
+    biometricSectionTitle: {
+      marginTop: 18,
+      marginBottom: 10,
+      fontSize: 15,
+      fontWeight: '600',
+      color: '#d2d2d2',
+    },
+
+    biometricSection: {
+      paddingHorizontal: 16,
+      borderRadius: 12,
+      backgroundColor: '#1c1c1c',
+    },
+
+    biometricRow: {
+      minHeight: 72,
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+
+    biometricInfo: {
+      flex: 1,
+    },
+
+    biometricTitle: {
+      fontSize: 15,
+      fontWeight: '600',
+      color: '#ffffff',
+    },
+
+    biometricDescription: {
+      marginTop: 3,
+      fontSize: 12,
+      lineHeight: 17,
+      color: '#888888',
+    },
+
+    biometricDivider: {
+      width: 1,
+      height: 32,
+      marginHorizontal: 12,
+      backgroundColor: '#555555',
+    },
+
+    biometricSeparator: {
+      height: 1,
+      backgroundColor: '#2b2b2b',
+    },
+
     lockTypeLoading: {
       paddingVertical: 18,
       alignItems: 'center',
     },
 
     inputLabel: {
-      marginTop: 12,
+      marginTop: 18,
       marginBottom: 6,
-      fontSize: 13,
-      color: '#aaaaaa',
+      fontSize: 15,
+      color: '#d2d2d2',
     },
 
     pinInput: {
@@ -3573,16 +3800,18 @@ const styles =
 
     pinButtonRow: {
       flexDirection: 'row',
-      marginTop: 16,
+      marginTop: 18,
       gap: 10,
     },
 
     cancelButton: {
       flex: 1,
-      paddingVertical: 13,
-      borderRadius: 8,
+      minHeight: 48,
+      paddingVertical: 0,
+      borderRadius: 12,
       backgroundColor: '#333333',
       alignItems: 'center',
+      justifyContent: 'center',
     },
 
     cancelButtonText: {
@@ -3593,16 +3822,20 @@ const styles =
 
     savePinButton: {
       flex: 1,
-      paddingVertical: 13,
-      borderRadius: 8,
+      minHeight: 48,
+      paddingVertical: 0,
+      borderRadius: 12,
       backgroundColor: '#ffffff',
       alignItems: 'center',
+      justifyContent: 'center',
     },
 
     savePinButtonText: {
       fontSize: 14,
       fontWeight: '600',
       color: '#101010',
+      textAlign: 'center',
+      width: '100%',
     },
 
     list: {

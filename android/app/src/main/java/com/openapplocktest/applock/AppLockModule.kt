@@ -41,6 +41,12 @@ class AppLockModule(
         private const val KEY_PENDING_LOCK_TYPE =
             "pending_lock_type"
 
+        private const val KEY_FACE_UNLOCK_ENABLED =
+            "face_unlock_enabled"
+
+        private const val KEY_FINGERPRINT_UNLOCK_ENABLED =
+            "fingerprint_unlock_enabled"
+
         private const val LOCK_TYPE_PIN =
             "pin"
 
@@ -297,15 +303,28 @@ class AppLockModule(
                 lockType =
                     oldLockType
                         ?: LOCK_TYPE_PIN
-
-                authenticationPreferences
-                    .edit()
-                    .putString(
-                        KEY_LOCK_TYPE,
-                        lockType
-                    )
-                    .apply()
             }
+
+            /*
+             * Biometric is now an additional layer, not an
+             * independent lock type. Normalize any legacy
+             * biometric value back to the base PIN type.
+             */
+            if (
+                lockType ==
+                    LOCK_TYPE_BIOMETRIC
+            ) {
+                lockType =
+                    LOCK_TYPE_PIN
+            }
+
+            authenticationPreferences
+                .edit()
+                .putString(
+                    KEY_LOCK_TYPE,
+                    lockType
+                )
+                .apply()
 
             promise.resolve(
                 lockType
@@ -418,6 +437,16 @@ class AppLockModule(
                 promise.reject(
                     "INVALID_PENDING_LOCK_TYPE",
                     "Invalid pending lock type."
+                )
+                return
+            }
+
+            if (
+                pendingType == LOCK_TYPE_BIOMETRIC
+            ) {
+                promise.reject(
+                    "UNSUPPORTED_LOCK_TYPE_SETUP",
+                    "Biometric lock type setup is not available yet."
                 )
                 return
             }
@@ -1170,6 +1199,112 @@ class AppLockModule(
             .startActivity(
                 intent
             )
+    }
+
+    @ReactMethod
+    fun getBiometricSettings(
+        promise: Promise
+    ) {
+
+        try {
+
+            val settings =
+                Arguments.createMap()
+
+            settings.putBoolean(
+                "face",
+                preferences.getBoolean(
+                    KEY_FACE_UNLOCK_ENABLED,
+                    false
+                )
+            )
+
+            settings.putBoolean(
+                "fingerprint",
+                preferences.getBoolean(
+                    KEY_FINGERPRINT_UNLOCK_ENABLED,
+                    false
+                )
+            )
+
+            promise.resolve(
+                settings
+            )
+
+        } catch (
+            exception: Exception
+        ) {
+
+            promise.reject(
+                "GET_BIOMETRIC_SETTINGS_ERROR",
+                exception.message,
+                exception
+            )
+        }
+    }
+
+    @ReactMethod
+    fun setFaceUnlockEnabled(
+        enabled: Boolean,
+        promise: Promise
+    ) {
+
+        try {
+
+            preferences
+                .edit()
+                .putBoolean(
+                    KEY_FACE_UNLOCK_ENABLED,
+                    enabled
+                )
+                .apply()
+
+            promise.resolve(
+                true
+            )
+
+        } catch (
+            exception: Exception
+        ) {
+
+            promise.reject(
+                "SET_FACE_UNLOCK_ERROR",
+                exception.message,
+                exception
+            )
+        }
+    }
+
+    @ReactMethod
+    fun setFingerprintUnlockEnabled(
+        enabled: Boolean,
+        promise: Promise
+    ) {
+
+        try {
+
+            preferences
+                .edit()
+                .putBoolean(
+                    KEY_FINGERPRINT_UNLOCK_ENABLED,
+                    enabled
+                )
+                .apply()
+
+            promise.resolve(
+                true
+            )
+
+        } catch (
+            exception: Exception
+        ) {
+
+            promise.reject(
+                "SET_FINGERPRINT_UNLOCK_ERROR",
+                exception.message,
+                exception
+            )
+        }
     }
 
     /*
