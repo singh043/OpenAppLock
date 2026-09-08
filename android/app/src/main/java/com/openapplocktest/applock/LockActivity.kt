@@ -44,10 +44,26 @@ class LockActivity : Activity() {
 
         const val EXTRA_NEW_LOCK_TYPE =
             "new_lock_type"
+
+        private const val PREFS_NAME =
+            "applock_settings"
+
+        private const val KEY_FACE_UNLOCK_ENABLED =
+            "face_unlock_enabled"
+
+        private const val KEY_FINGERPRINT_UNLOCK_ENABLED =
+            "fingerprint_unlock_enabled"
     }
 
     private lateinit var authenticationManager:
         AuthenticationManager
+
+    private val biometricPreferences by lazy {
+        getSharedPreferences(
+            PREFS_NAME,
+            Context.MODE_PRIVATE
+        )
+    }
 
     private lateinit var rootLayout:
         LinearLayout
@@ -221,10 +237,6 @@ class LockActivity : Activity() {
                     .LOCK_TYPE_PATTERN ->
                     hasPattern
 
-                AuthenticationManager
-                    .LOCK_TYPE_BIOMETRIC ->
-                    true
-
                 else ->
                     hasPin
             }
@@ -238,6 +250,27 @@ class LockActivity : Activity() {
         if (!isCreatingCredential) {
             rootLayout.background =
                 createLockScreenBackground()
+        }
+
+        if (
+            !isCreatingCredential &&
+            isBiometricLayerEnabled()
+        ) {
+
+            createBiometricFirstScreen()
+
+            setContentView(
+                rootLayout
+            )
+
+            window.decorView.postDelayed(
+                {
+                    authenticateBiometric()
+                },
+                300
+            )
+
+            return
         }
 
         val title =
@@ -254,10 +287,6 @@ class LockActivity : Activity() {
                     AuthenticationManager
                         .LOCK_TYPE_PASSWORD ->
                         "Create Password"
-
-                    AuthenticationManager
-                        .LOCK_TYPE_BIOMETRIC ->
-                        "Enable Biometric"
 
                     else ->
                         "Create AppLock PIN"
@@ -283,10 +312,6 @@ class LockActivity : Activity() {
                         .LOCK_TYPE_PASSWORD ->
                         "Create a password to protect your apps"
 
-                    AuthenticationManager
-                        .LOCK_TYPE_BIOMETRIC ->
-                        "Use your biometric to enable AppLock"
-
                     else ->
                         "Create a secure 4 or 6 digit PIN"
                 }
@@ -302,10 +327,6 @@ class LockActivity : Activity() {
                     AuthenticationManager
                         .LOCK_TYPE_PASSWORD ->
                         "Enter your password to continue"
-
-                    AuthenticationManager
-                        .LOCK_TYPE_BIOMETRIC ->
-                        "Use biometric authentication to continue"
 
                     else ->
                         "Enter your PIN to continue"
@@ -338,10 +359,156 @@ class LockActivity : Activity() {
                 createPatternScreen()
             }
 
-            AuthenticationManager
-                .LOCK_TYPE_BIOMETRIC -> {
+            else -> {
 
-                createBiometricScreen()
+                lockType =
+                    AuthenticationManager
+                        .LOCK_TYPE_PIN
+
+                createPinScreen()
+            }
+        }
+
+        setContentView(
+            rootLayout
+        )
+
+        pinInput?.requestFocus()
+
+        passwordInput?.requestFocus()
+    }
+
+    private fun isBiometricLayerEnabled(): Boolean {
+
+        return biometricPreferences.getBoolean(
+            KEY_FACE_UNLOCK_ENABLED,
+            false
+        ) ||
+            biometricPreferences.getBoolean(
+                KEY_FINGERPRINT_UNLOCK_ENABLED,
+                false
+            )
+    }
+
+    private fun biometricSubtitle(): String {
+
+        val faceEnabled =
+            biometricPreferences.getBoolean(
+                KEY_FACE_UNLOCK_ENABLED,
+                false
+            )
+
+        val fingerprintEnabled =
+            biometricPreferences.getBoolean(
+                KEY_FINGERPRINT_UNLOCK_ENABLED,
+                false
+            )
+
+        return when {
+
+            faceEnabled && fingerprintEnabled ->
+                "Use face or fingerprint to continue"
+
+            faceEnabled ->
+                "Use face to continue"
+
+            fingerprintEnabled ->
+                "Use fingerprint to continue"
+
+            else ->
+                "Use your biometric to continue"
+        }
+    }
+
+    private fun createBiometricFirstScreen() {
+
+        addHeader(
+            "App Locked",
+            biometricSubtitle(),
+            true
+        )
+
+        addSimpleText(
+            "Authenticate with biometrics or use your ${displayLockType(lockType)}.",
+            14,
+            Color.rgb(
+                165,
+                165,
+                165
+            ),
+            24
+        )
+
+        actionButton =
+            createButton(
+                "Use ${displayLockType(lockType)}"
+            )
+
+        actionButton.setOnClickListener {
+            showCredentialFallbackScreen()
+        }
+
+        rootLayout.addView(
+            actionButton,
+            createLayoutParams(
+                0,
+                18
+            )
+        )
+    }
+
+    private fun showCredentialFallbackScreen() {
+
+        clearInputReferences()
+
+        isCreatingCredential =
+            false
+
+        rootLayout =
+            createRootLayout()
+
+        rootLayout.background =
+            createLockScreenBackground()
+
+        val subtitle =
+            when (lockType) {
+
+                AuthenticationManager
+                    .LOCK_TYPE_PATTERN ->
+                    "Draw your pattern to continue"
+
+                AuthenticationManager
+                    .LOCK_TYPE_PASSWORD ->
+                    "Enter your password to continue"
+
+                else ->
+                    "Enter your PIN to continue"
+            }
+
+        addHeader(
+            "App Locked",
+            subtitle,
+            true
+        )
+
+        when (lockType) {
+
+            AuthenticationManager
+                .LOCK_TYPE_PIN -> {
+
+                createPinScreen()
+            }
+
+            AuthenticationManager
+                .LOCK_TYPE_PASSWORD -> {
+
+                createPasswordScreen()
+            }
+
+            AuthenticationManager
+                .LOCK_TYPE_PATTERN -> {
+
+                createPatternScreen()
             }
 
             else -> {
@@ -361,21 +528,8 @@ class LockActivity : Activity() {
         pinInput?.requestFocus()
 
         passwordInput?.requestFocus()
-
-        if (
-            lockType ==
-                AuthenticationManager
-                    .LOCK_TYPE_BIOMETRIC
-        ) {
-
-            window.decorView.postDelayed(
-                {
-                    authenticateBiometric()
-                },
-                300
-            )
-        }
     }
+
 
     /*
      * =========================================================
@@ -3066,12 +3220,19 @@ class LockActivity : Activity() {
     private fun authenticateBiometric() {
 
         if (
+            !isBiometricLayerEnabled()
+        ) {
+
+            showCredentialFallbackScreen()
+
+            return
+        }
+
+        if (
             Build.VERSION.SDK_INT < 28
         ) {
 
-            showMessage(
-                "Biometric authentication is not supported on this Android version"
-            )
+            showCredentialFallbackScreen()
 
             return
         }
@@ -3108,9 +3269,7 @@ class LockActivity : Activity() {
                     .BIOMETRIC_SUCCESS
         ) {
 
-            showMessage(
-                "Biometric authentication is not available"
-            )
+            showCredentialFallbackScreen()
 
             return
         }
@@ -3128,14 +3287,15 @@ class LockActivity : Activity() {
                     "OpenAppLock"
                 )
                 .setSubtitle(
-                    "Authenticate to unlock"
+                    biometricSubtitle()
                 )
 
         promptBuilder.setNegativeButton(
-            "Cancel",
+            "Use ${displayLockType(lockType)}",
             executor,
             DialogInterface.OnClickListener {
                 _, _ ->
+                showCredentialFallbackScreen()
             }
         )
 
@@ -3174,6 +3334,22 @@ class LockActivity : Activity() {
                         errString
                     )
 
+                    if (
+                        errorCode ==
+                            android.hardware.biometrics
+                                .BiometricPrompt
+                                .BIOMETRIC_ERROR_USER_CANCELED ||
+                        errorCode ==
+                            android.hardware.biometrics
+                                .BiometricPrompt
+                                .BIOMETRIC_ERROR_CANCELED
+                    ) {
+                        // Samsung/Android can report a transient canceled
+                        // callback when the biometric operation is dismissed
+                        // or interrupted. Do not show it as a user-facing toast.
+                        return
+                    }
+
                     showMessage(
                         errString.toString()
                     )
@@ -3183,13 +3359,13 @@ class LockActivity : Activity() {
 
                     super.onAuthenticationFailed()
 
-                    showMessage(
-                        "Biometric not recognized"
-                    )
+                    // Keep the biometric prompt open so the user can retry.
+                    // The system prompt also provides the fallback button.
                 }
             }
         )
     }
+
 
     /*
      * =========================================================
