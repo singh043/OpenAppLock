@@ -7,6 +7,8 @@ import React, {
 
 import {
   ActivityIndicator,
+  PixelRatio,
+  GestureResponderEvent,
   Alert,
   AppState,
   AppStateStatus,
@@ -55,6 +57,196 @@ type LockType =
   | 'biometric';
 
 const {AppLockModule} = NativeModules;
+
+type SettingsPatternPadProps = {
+  pattern: number[];
+  onChange: React.Dispatch<React.SetStateAction<number[]>>;
+};
+
+function SettingsPatternPad({
+  pattern,
+  onChange,
+}: SettingsPatternPadProps): React.JSX.Element {
+  const padSize = 290;
+  const spacing = padSize / 4;
+  const density = PixelRatio.get();
+
+  // Match the existing native PatternView's canvas-pixel values.
+  // React Native dimensions are dp, while the native View drawing values
+  // (8f dot radius, 18f selected radius, 7f line width, 65f touch radius)
+  // are raw canvas pixels, so convert them to dp here.
+  const dotRadius = 8 / density;
+  const selectedRadius = 18 / density;
+  const lineWidth = 7 / density;
+  const touchRadius = 65 / density;
+  const selectedBorderWidth = 8 / density;
+
+  const getPoint = (index: number) => ({
+    x: spacing + (index % 3) * spacing,
+    y: spacing + Math.floor(index / 3) * spacing,
+  });
+
+  const selectPointAt = (
+    x: number,
+    y: number,
+    currentPattern: number[] = pattern,
+  ) => {
+    let closest = -1;
+    let closestDistance = Number.POSITIVE_INFINITY;
+
+    for (let index = 0; index < 9; index += 1) {
+      if (currentPattern.includes(index)) {
+        continue;
+      }
+
+      const point = getPoint(index);
+      const dx = x - point.x;
+      const dy = y - point.y;
+      const distance = dx * dx + dy * dy;
+
+      if (distance < closestDistance) {
+        closestDistance = distance;
+        closest = index;
+      }
+    }
+
+    if (
+      closest >= 0 &&
+      closestDistance <= touchRadius * touchRadius
+    ) {
+      onChange(current =>
+        current.includes(closest)
+          ? current
+          : [...current, closest],
+      );
+    }
+  };
+
+  const getLocalTouch = (
+    event: GestureResponderEvent,
+  ) => ({
+    x: event.nativeEvent.locationX,
+    y: event.nativeEvent.locationY,
+  });
+
+  return (
+    <View
+      style={{
+        width: 314,
+        height: 314,
+        marginTop: 8,
+        alignSelf: 'center',
+        borderRadius: 22,
+        padding: 12,
+        backgroundColor: '#141414',
+        overflow: 'hidden',
+      }}>
+      <View
+        onStartShouldSetResponder={() => true}
+        onMoveShouldSetResponder={() => true}
+        onResponderGrant={event => {
+          const {x, y} = getLocalTouch(event);
+          onChange([]);
+          selectPointAt(x, y, []);
+        }}
+        onResponderMove={event => {
+          const {x, y} = getLocalTouch(event);
+          selectPointAt(x, y);
+        }}
+        onResponderRelease={() => undefined}
+        onResponderTerminate={() => undefined}
+        style={{
+          width: padSize,
+          height: padSize,
+          position: 'relative',
+          backgroundColor: '#121212',
+        }}>
+        {pattern.slice(1).map((pointIndex, index) => {
+          const from = getPoint(pattern[index]);
+          const to = getPoint(pointIndex);
+          const dx = to.x - from.x;
+          const dy = to.y - from.y;
+          const length = Math.sqrt(dx * dx + dy * dy);
+          const angle =
+            (Math.atan2(dy, dx) * 180) / Math.PI;
+          const centerX = (from.x + to.x) / 2;
+          const centerY = (from.y + to.y) / 2;
+
+          return (
+            <View
+              key={`line-${pattern[index]}-${pointIndex}-${index}`}
+              pointerEvents="none"
+              style={{
+                position: 'absolute',
+                width: length,
+                height: lineWidth,
+                left: centerX - length / 2,
+                top: centerY - lineWidth / 2,
+                borderRadius: lineWidth / 2,
+                backgroundColor: '#ffffff',
+                transform: [
+                  {rotate: `${angle}deg`},
+                ],
+              }}
+            />
+          );
+        })}
+
+        {Array.from({length: 9}, (_, index) => {
+          const point = getPoint(index);
+          const selected = pattern.includes(index);
+
+          return (
+            <View
+              key={index}
+              pointerEvents="none"
+              style={{
+                position: 'absolute',
+                width: selected
+                  ? selectedRadius * 2
+                  : dotRadius * 2,
+                height: selected
+                  ? selectedRadius * 2
+                  : dotRadius * 2,
+                left:
+                  point.x -
+                  (selected
+                    ? selectedRadius
+                    : dotRadius),
+                top:
+                  point.y -
+                  (selected
+                    ? selectedRadius
+                    : dotRadius),
+                borderRadius: selected
+                  ? selectedRadius
+                  : dotRadius,
+                borderWidth: selected ? selectedBorderWidth : 0,
+                borderColor: '#ffffff',
+                backgroundColor: selected
+                  ? '#121212'
+                  : '#787878',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}>
+              {selected && (
+                <View
+                  style={{
+                    width: dotRadius * 2,
+                    height: dotRadius * 2,
+                    borderRadius: dotRadius,
+                    backgroundColor: '#787878',
+                  }}
+                />
+              )}
+            </View>
+          );
+        })}
+      </View>
+    </View>
+  );
+}
+
 
 const IMMEDIATE = 'immediate';
 const AFTER_SCREEN_LOCK = 'after_screen_lock';
@@ -123,6 +315,12 @@ function App(): React.JSX.Element {
 
   const [settingsPin, setSettingsPin] =
     useState('');
+
+  const [settingsPassword, setSettingsPassword] =
+    useState('');
+
+  const [settingsPattern, setSettingsPattern] =
+    useState<number[]>([]);
 
   const [authenticatingSettings, setAuthenticatingSettings] =
     useState(false);
@@ -576,11 +774,13 @@ function App(): React.JSX.Element {
           const [
             pinExists,
             accessibility,
+            selectedLockType,
           ] =
             await Promise.all([
               AppLockModule.hasPin(),
               AppLockModule
                 .isAccessibilityServiceEnabled(),
+              AppLockModule.getLockType(),
             ]);
 
           if (!mounted) {
@@ -594,6 +794,16 @@ function App(): React.JSX.Element {
           setAccessibilityEnabled(
             accessibility,
           );
+
+          if (
+            selectedLockType === 'pin' ||
+            selectedLockType === 'pattern' ||
+            selectedLockType === 'password'
+          ) {
+            setLockType(
+              selectedLockType,
+            );
+          }
 
         } catch (error) {
 
@@ -672,6 +882,8 @@ function App(): React.JSX.Element {
             );
 
             setSettingsPin('');
+            setSettingsPassword('');
+            setSettingsPattern([]);
 
             setShowChangePin(
               false,
@@ -746,6 +958,8 @@ function App(): React.JSX.Element {
             );
 
             setSettingsPin('');
+            setSettingsPassword('');
+            setSettingsPattern([]);
 
             setShowChangePin(
               false,
@@ -927,62 +1141,79 @@ function App(): React.JSX.Element {
       }
     };
 
-  const handleSettingsPin =
+  const handleSettingsCredential =
     async () => {
 
-      if (
-        settingsPin.length === 0
-      ) {
+      let credential = '';
 
+      if (lockType === 'pin') {
+        credential = settingsPin;
+      } else if (lockType === 'password') {
+        credential = settingsPassword;
+      } else {
+        credential = settingsPattern.join('');
+      }
+
+      if (credential.length === 0) {
         Alert.alert(
           'OpenAppLock',
-          'Enter your PIN.',
+          `Enter your ${lockType}.`,
+        );
+
+        return;
+      }
+
+      if (
+        lockType === 'pattern' &&
+        settingsPattern.length < 4
+      ) {
+        Alert.alert(
+          'OpenAppLock',
+          'Pattern must contain at least 4 points.',
         );
 
         return;
       }
 
       try {
-
         setAuthenticatingSettings(
           true,
         );
 
         const valid =
           await AppLockModule
-            .verifyPin(
-              settingsPin,
+            .verifyCredential(
+              lockType,
+              credential,
             );
 
         if (!valid) {
-
           setSettingsPin('');
+          setSettingsPassword('');
+          setSettingsPattern([]);
 
           Alert.alert(
-            'Incorrect PIN',
-            'The PIN you entered is incorrect.',
+            'Incorrect credential',
+            `The ${lockType} you entered is incorrect.`,
           );
 
           return;
         }
 
         setSettingsPin('');
-
+        setSettingsPassword('');
+        setSettingsPattern([]);
         setSettingsAuthenticated(
           true,
         );
 
         await loadMainData();
-
       } catch (error) {
-
         Alert.alert(
           'Unable to authenticate',
           'Please try again.',
         );
-
       } finally {
-
         setAuthenticatingSettings(
           false,
         );
@@ -1888,14 +2119,18 @@ function App(): React.JSX.Element {
     hasPin === true &&
     !settingsAuthenticated
   ) {
+    const settingsAuthMessage =
+      lockType === 'pattern'
+        ? 'Use your current pattern to access settings.'
+        : lockType === 'password'
+          ? 'Enter your current password to access settings.'
+          : 'Enter your current PIN to access settings.';
 
     return (
       <SafeAreaView
         style={styles.container}>
-
         <View
           style={styles.center}>
-
           <Text
             style={styles.authIcon}>
             🔐
@@ -1908,42 +2143,63 @@ function App(): React.JSX.Element {
 
           <Text
             style={styles.authMessage}>
-            Enter your PIN to access settings.
+            {settingsAuthMessage}
           </Text>
 
-          <TextInput
-            style={styles.authInput}
-            value={settingsPin}
-            onChangeText={
-              setSettingsPin
-            }
-            keyboardType="number-pad"
-            secureTextEntry
-            maxLength={6}
-            placeholder="Enter PIN"
-            placeholderTextColor="#777"
-          />
+          {lockType === 'pattern' ? (
+            <SettingsPatternPad
+              pattern={settingsPattern}
+              onChange={setSettingsPattern}
+            />
+          ) : (
+            <TextInput
+              style={styles.authInput}
+              value={
+                lockType === 'password'
+                  ? settingsPassword
+                  : settingsPin
+              }
+              onChangeText={
+                lockType === 'password'
+                  ? setSettingsPassword
+                  : setSettingsPin
+              }
+              keyboardType={
+                lockType === 'password'
+                  ? 'default'
+                  : 'number-pad'
+              }
+              secureTextEntry
+              maxLength={
+                lockType === 'password'
+                  ? 64
+                  : 6
+              }
+              placeholder={
+                lockType === 'password'
+                  ? 'Enter password'
+                  : 'Enter PIN'
+              }
+              placeholderTextColor="#777"
+            />
+          )}
 
           <TouchableOpacity
             style={styles.primaryButton}
             onPress={
-              handleSettingsPin
+              handleSettingsCredential
             }
             disabled={
               authenticatingSettings
             }>
-
             <Text
               style={styles.primaryButtonText}>
               {authenticatingSettings
                 ? 'Checking...'
                 : 'Unlock'}
             </Text>
-
           </TouchableOpacity>
-
         </View>
-
       </SafeAreaView>
     );
   }
