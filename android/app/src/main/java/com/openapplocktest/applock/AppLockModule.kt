@@ -193,6 +193,34 @@ class AppLockModule(
     }
 
     @ReactMethod
+    fun verifyCredential(
+        lockType: String,
+        credential: String,
+        promise: Promise
+    ) {
+
+        try {
+            val valid =
+                authenticationManager
+                    .verifyCredential(
+                        lockType,
+                        credential
+                    )
+
+            promise.resolve(valid)
+
+        } catch (
+            exception: Exception
+        ) {
+            promise.reject(
+                "VERIFY_CREDENTIAL_ERROR",
+                exception.message,
+                exception
+            )
+        }
+    }
+
+    @ReactMethod
     fun verifyPin(
         pin: String,
         promise: Promise
