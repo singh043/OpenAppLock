@@ -260,9 +260,10 @@ class AppLockEngine(context: Context) {
                 "PROTECTED APP DETECTED: $packageName"
             )
 
-            launchLockActivity(
-                packageName
-            )
+            AppLockAccessibilityService
+                .prepareForLock(
+                    packageName
+                )
 
         } else {
 
@@ -271,38 +272,6 @@ class AppLockEngine(context: Context) {
                 "App is not protected: $packageName"
             )
         }
-    }
-
-    private fun launchLockActivity(
-        packageName: String
-    ) {
-
-        val intent =
-            Intent(
-                appContext,
-                LockActivity::class.java
-            ).apply {
-
-                putExtra(
-                    LockActivity
-                        .EXTRA_TARGET_PACKAGE,
-                    packageName
-                )
-
-                addFlags(
-                    Intent.FLAG_ACTIVITY_NEW_TASK or
-                        Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS
-                )
-            }
-
-        appContext.startActivity(
-            intent
-        )
-
-        Log.d(
-            TAG,
-            "LockActivity launched for: $packageName"
-        )
     }
 
     private fun getLockBehavior():
