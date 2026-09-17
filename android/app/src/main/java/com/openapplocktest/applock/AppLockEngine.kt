@@ -99,14 +99,28 @@ class AppLockEngine(context: Context) {
          * the target, do not dismiss the lock just because another window
          * callback arrived during Activity/keyboard transitions.
          */
-        if (shownTarget == packageName &&
-            !LockSessionManager.isAuthenticated(packageName)
+        /*
+         * The dedicated lock Activity becomes the foreground window through
+         * several Android lifecycle/window callbacks. During that transition
+         * Accessibility can briefly report an intermediate package.
+         *
+         * If a lock target already exists and authentication has not happened,
+         * NEVER let such an intermediate callback dismiss that lock. The lock
+         * itself is the authentication barrier.
+         */
+        if (
+            shownTarget != null &&
+            !LockSessionManager.isAuthenticated(shownTarget)
         ) {
-            lastForegroundPackage = packageName
-            if (!LockOverlayManager.isShowingFor(packageName)) {
-                Log.d(TAG, "LOCK UI MISSING - retrying: $packageName")
-                AppLockAccessibilityService.showLockOverlay(packageName)
+            if (packageName == shownTarget) {
+                lastForegroundPackage = packageName
+
+                if (!LockOverlayManager.isShowingFor(packageName)) {
+                    Log.d(TAG, "LOCK UI MISSING - retrying: $packageName")
+                    AppLockAccessibilityService.showLockOverlay(packageName)
+                }
             }
+
             return
         }
 
@@ -126,26 +140,8 @@ class AppLockEngine(context: Context) {
         Log.d(TAG, "Foreground app changed: $packageName")
 
         if (shownTarget != null && shownTarget != packageName) {
-            /*
-             * A different package event can be a stale accessibility callback
-             * from the underlying/task transition while our lock Activity is
-             * still actually on screen.
-             *
-             * Do NOT dismiss an active authentication barrier in that case.
-             * If the user really leaves the protected app (Home/another app),
-             * LockScreenActivity will be paused first, and the later foreground
-             * event is then allowed to hide it.
-             */
-            if (LockScreenActivity.isResumed()) {
-                Log.d(
-                    TAG,
-                    "Ignoring stale package event while lock is resumed: $packageName"
-                )
-                return
-            }
-
-            // The lock Activity is no longer visible, so the user actually
-            // moved away from the protected app.
+            // User actually moved away from the protected app. Remove only
+            // the visible lock screen; authentication is still not granted.
             LockOverlayManager.hide()
         }
 
