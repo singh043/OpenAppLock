@@ -21,8 +21,6 @@ import android.text.InputType
 import android.text.method.HideReturnsTransformationMethod
 import android.text.method.PasswordTransformationMethod
 import android.view.Gravity
-import android.view.WindowManager
-import android.view.inputmethod.InputMethodManager
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
@@ -94,9 +92,6 @@ class LockActivity : Activity() {
     private var currentCredentialInput:
         EditText? = null
 
-    private var credentialKeyboardShownForScreen =
-        false
-
     private var currentPatternView:
         PatternView? = null
 
@@ -120,18 +115,6 @@ class LockActivity : Activity() {
 
     private var isChangingCredential =
         false
-
-    override fun onWindowFocusChanged(
-        hasFocus: Boolean
-    ) {
-        super.onWindowFocusChanged(
-            hasFocus
-        )
-
-        if (hasFocus) {
-            showCredentialKeyboardIfNeeded()
-        }
-    }
 
     override fun onCreate(
         savedInstanceState: Bundle?
@@ -390,7 +373,9 @@ class LockActivity : Activity() {
             rootLayout
         )
 
-        showCredentialKeyboardIfNeeded()
+        pinInput?.requestFocus()
+
+        passwordInput?.requestFocus()
     }
 
     private fun isBiometricLayerEnabled(): Boolean {
@@ -540,60 +525,11 @@ class LockActivity : Activity() {
             rootLayout
         )
 
-        showCredentialKeyboardIfNeeded()
+        pinInput?.requestFocus()
+
+        passwordInput?.requestFocus()
     }
 
-
-    private fun showCredentialKeyboardIfNeeded() {
-
-        if (credentialKeyboardShownForScreen) {
-            return
-        }
-
-        val input =
-            passwordInput
-                ?: pinInput
-                ?: currentCredentialInput
-                ?: return
-
-        credentialKeyboardShownForScreen =
-            true
-
-        input.requestFocus()
-
-        if (isPinInput(input)) {
-            window.setSoftInputMode(
-                WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE or
-                    WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_HIDDEN
-            )
-            return
-        }
-
-        window.setSoftInputMode(
-            WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE or
-                WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE
-        )
-
-        input.postDelayed(
-            {
-                if (
-                    !isFinishing &&
-                    !isDestroyed
-                ) {
-                    val inputMethodManager =
-                        getSystemService(
-                            Context.INPUT_METHOD_SERVICE
-                        ) as? InputMethodManager
-
-                    inputMethodManager?.showSoftInput(
-                        input,
-                        InputMethodManager.SHOW_IMPLICIT
-                    )
-                }
-            },
-            150
-        )
-    }
 
     /*
      * =========================================================
@@ -737,13 +673,6 @@ class LockActivity : Activity() {
             currentType
         )
 
-        if (currentType == AuthenticationManager.LOCK_TYPE_PIN) {
-            addPinKeypad(
-                premiumStyle = true
-            )
-            applyPremiumVerifyPinStyle()
-        }
-
         actionButton =
             createButton(
                 "Verify & Continue"
@@ -752,19 +681,6 @@ class LockActivity : Activity() {
         actionButton.setOnClickListener {
 
             verifyCurrentCredentialAndContinue()
-        }
-
-        if (currentType == AuthenticationManager.LOCK_TYPE_PIN) {
-            actionButton.background =
-                GradientDrawable().apply {
-                    setColor(Color.WHITE)
-                    cornerRadius = dp(16).toFloat()
-                    setStroke(
-                        dp(1),
-                        Color.rgb(150, 112, 35)
-                    )
-                }
-            actionButton.elevation = dp(4).toFloat()
         }
 
         rootLayout.addView(
@@ -782,8 +698,6 @@ class LockActivity : Activity() {
         setContentView(
             rootLayout
         )
-
-        showCredentialKeyboardIfNeeded()
 
         addChangeFlowBackArrow()
     }
@@ -919,12 +833,7 @@ class LockActivity : Activity() {
 
             input.inputType =
                 InputType.TYPE_CLASS_TEXT or
-                    InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS or
                     InputType.TYPE_TEXT_VARIATION_PASSWORD
-
-            input.imeOptions =
-                input.imeOptions or
-                    android.view.inputmethod.EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING
 
             input.filters =
                 arrayOf(
@@ -1112,7 +1021,6 @@ class LockActivity : Activity() {
         )
 
         setContentView(rootLayout)
-        showCredentialKeyboardIfNeeded()
         addChangeFlowBackArrow()
     }
 
@@ -1289,8 +1197,6 @@ class LockActivity : Activity() {
             rootLayout
         )
 
-        showCredentialKeyboardIfNeeded()
-
         addChangeFlowBackArrow()
     }
 
@@ -1326,13 +1232,6 @@ class LockActivity : Activity() {
         pinInput?.inputType =
             InputType.TYPE_CLASS_NUMBER or
                 InputType.TYPE_NUMBER_VARIATION_PASSWORD
-
-        pinInput?.showSoftInputOnFocus = false
-
-        pinInput?.imeOptions =
-            pinInput?.imeOptions?.or(
-                android.view.inputmethod.EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING
-            ) ?: 0
 
         pinInput?.filters =
             arrayOf(
@@ -1382,13 +1281,6 @@ class LockActivity : Activity() {
             InputType.TYPE_CLASS_NUMBER or
                 InputType.TYPE_NUMBER_VARIATION_PASSWORD
 
-        confirmInput?.showSoftInputOnFocus = false
-
-        confirmInput?.imeOptions =
-            confirmInput?.imeOptions?.or(
-                android.view.inputmethod.EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING
-            ) ?: 0
-
         confirmInput?.filters =
             arrayOf(
                 InputFilter.LengthFilter(
@@ -1410,11 +1302,6 @@ class LockActivity : Activity() {
                 0,
                 12
             )
-        )
-
-        addPinKeypad(
-            premiumStyle = true,
-            compact = true
         )
 
         actionButton =
@@ -1451,8 +1338,6 @@ class LockActivity : Activity() {
         setContentView(
             rootLayout
         )
-
-        showCredentialKeyboardIfNeeded()
     }
 
     private fun continueToConfirmPin() {
@@ -1535,13 +1420,6 @@ class LockActivity : Activity() {
             InputType.TYPE_CLASS_NUMBER or
                 InputType.TYPE_NUMBER_VARIATION_PASSWORD
 
-        confirmInput?.showSoftInputOnFocus = false
-
-        confirmInput?.imeOptions =
-            confirmInput?.imeOptions?.or(
-                android.view.inputmethod.EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING
-            ) ?: 0
-
         confirmInput?.filters =
             arrayOf(
                 InputFilter.LengthFilter(
@@ -1563,11 +1441,6 @@ class LockActivity : Activity() {
                 0,
                 12
             )
-        )
-
-        addPinKeypad(
-            premiumStyle = true,
-            compact = true
         )
 
         actionButton =
@@ -1593,8 +1466,6 @@ class LockActivity : Activity() {
         setContentView(
             rootLayout
         )
-
-        showCredentialKeyboardIfNeeded()
     }
 
     private fun changePin() {
@@ -1736,13 +1607,7 @@ class LockActivity : Activity() {
 
         passwordInput?.inputType =
             InputType.TYPE_CLASS_TEXT or
-                InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS or
                 InputType.TYPE_TEXT_VARIATION_PASSWORD
-
-        passwordInput?.imeOptions =
-            passwordInput?.imeOptions?.or(
-                android.view.inputmethod.EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING
-            ) ?: 0
 
         passwordInput?.filters =
             arrayOf(
@@ -1791,13 +1656,7 @@ class LockActivity : Activity() {
 
         confirmInput?.inputType =
             InputType.TYPE_CLASS_TEXT or
-                InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS or
                 InputType.TYPE_TEXT_VARIATION_PASSWORD
-
-        confirmInput?.imeOptions =
-            confirmInput?.imeOptions?.or(
-                android.view.inputmethod.EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING
-            ) ?: 0
 
         confirmInput?.filters =
             arrayOf(
@@ -1856,8 +1715,6 @@ class LockActivity : Activity() {
         setContentView(
             rootLayout
         )
-
-        showCredentialKeyboardIfNeeded()
     }
 
     private fun continueToConfirmPassword() {
@@ -1935,13 +1792,7 @@ class LockActivity : Activity() {
 
         confirmInput?.inputType =
             InputType.TYPE_CLASS_TEXT or
-                InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS or
                 InputType.TYPE_TEXT_VARIATION_PASSWORD
-
-        confirmInput?.imeOptions =
-            confirmInput?.imeOptions?.or(
-                android.view.inputmethod.EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING
-            ) ?: 0
 
         confirmInput?.filters =
             arrayOf(
@@ -1995,8 +1846,6 @@ class LockActivity : Activity() {
         setContentView(
             rootLayout
         )
-
-        showCredentialKeyboardIfNeeded()
     }
 
     private fun changePassword() {
@@ -2283,8 +2132,6 @@ class LockActivity : Activity() {
             rootLayout
         )
 
-        showCredentialKeyboardIfNeeded()
-
         addChangeFlowBackArrow()
     }
 
@@ -2456,8 +2303,6 @@ class LockActivity : Activity() {
             rootLayout
         )
 
-        showCredentialKeyboardIfNeeded()
-
         addChangeFlowBackArrow()
     }
 
@@ -2503,13 +2348,6 @@ class LockActivity : Activity() {
                     InputType.TYPE_CLASS_NUMBER or
                         InputType.TYPE_NUMBER_VARIATION_PASSWORD
 
-                currentCredentialInput?.showSoftInputOnFocus = false
-
-                currentCredentialInput?.imeOptions =
-                    currentCredentialInput?.imeOptions?.or(
-                        android.view.inputmethod.EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING
-                    ) ?: 0
-
                 currentCredentialInput
                     ?.filters =
                     arrayOf(
@@ -2553,11 +2391,6 @@ class LockActivity : Activity() {
                     ?.inputType =
                     InputType.TYPE_CLASS_TEXT or
                         InputType.TYPE_TEXT_VARIATION_PASSWORD
-
-                currentCredentialInput?.imeOptions =
-                    currentCredentialInput?.imeOptions?.or(
-                        android.view.inputmethod.EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING
-                    ) ?: 0
 
                 currentCredentialInput
                     ?.filters =
@@ -2743,13 +2576,6 @@ class LockActivity : Activity() {
             InputType.TYPE_CLASS_NUMBER or
                 InputType.TYPE_NUMBER_VARIATION_PASSWORD
 
-        pinInput?.showSoftInputOnFocus = false
-
-        pinInput?.imeOptions =
-            pinInput?.imeOptions?.or(
-                android.view.inputmethod.EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING
-            ) ?: 0
-
         pinInput?.filters =
             arrayOf(
                 InputFilter.LengthFilter(
@@ -2794,13 +2620,6 @@ class LockActivity : Activity() {
                 InputType.TYPE_CLASS_NUMBER or
                     InputType.TYPE_NUMBER_VARIATION_PASSWORD
 
-            confirmInput?.showSoftInputOnFocus = false
-
-            confirmInput?.imeOptions =
-                confirmInput?.imeOptions?.or(
-                    android.view.inputmethod.EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING
-                ) ?: 0
-
             confirmInput?.filters =
                 arrayOf(
                     InputFilter.LengthFilter(
@@ -2821,11 +2640,6 @@ class LockActivity : Activity() {
                 )
             )
         }
-
-        addPinKeypad(
-            premiumStyle = true,
-            compact = isCreatingCredential
-        )
 
         actionButton =
             createButton(
@@ -2995,13 +2809,7 @@ class LockActivity : Activity() {
 
         passwordInput?.inputType =
             InputType.TYPE_CLASS_TEXT or
-                InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS or
                 InputType.TYPE_TEXT_VARIATION_PASSWORD
-
-        passwordInput?.imeOptions =
-            passwordInput?.imeOptions?.or(
-                android.view.inputmethod.EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING
-            ) ?: 0
 
         passwordInput?.filters =
             arrayOf(
@@ -3045,13 +2853,7 @@ class LockActivity : Activity() {
 
             confirmInput?.inputType =
                 InputType.TYPE_CLASS_TEXT or
-                    InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS or
                     InputType.TYPE_TEXT_VARIATION_PASSWORD
-
-            confirmInput?.imeOptions =
-                confirmInput?.imeOptions?.or(
-                    android.view.inputmethod.EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING
-                ) ?: 0
 
             confirmInput?.filters =
                 arrayOf(
@@ -3577,7 +3379,6 @@ class LockActivity : Activity() {
             .authenticate(
                 targetPackage
             )
-
         cancelReplacementNotification()
 
         showMessage(
@@ -3594,9 +3395,6 @@ class LockActivity : Activity() {
      */
 
     private fun clearInputReferences() {
-
-        credentialKeyboardShownForScreen =
-            false
 
         pinInput = null
         passwordInput = null
@@ -4084,393 +3882,6 @@ class LockActivity : Activity() {
         )
     }
 
-    private fun isPinInput(
-        input: EditText
-    ): Boolean {
-
-        val variation =
-            input.inputType and
-                InputType.TYPE_MASK_VARIATION
-
-        return (
-            input.inputType and
-                InputType.TYPE_MASK_CLASS
-        ) == InputType.TYPE_CLASS_NUMBER &&
-            variation == InputType.TYPE_NUMBER_VARIATION_PASSWORD
-    }
-
-    private fun applyPremiumVerifyPinStyle() {
-
-        rootLayout.background =
-            GradientDrawable(
-                GradientDrawable.Orientation.TL_BR,
-                intArrayOf(
-                    Color.rgb(24, 21, 17),
-                    Color.rgb(10, 10, 10),
-                    Color.rgb(14, 12, 10)
-                )
-            )
-
-        if (rootLayout.childCount > 0) {
-            val lockIcon =
-                rootLayout.getChildAt(0) as? TextView
-
-            lockIcon?.apply {
-                textSize = 54f
-                setShadowLayer(
-                    dp(8).toFloat(),
-                    0f,
-                    dp(2).toFloat(),
-                    Color.rgb(145, 105, 25)
-                )
-            }
-        }
-
-        val inputContainer =
-            currentCredentialInput
-                ?.parent as? LinearLayout
-
-        inputContainer?.background =
-            GradientDrawable().apply {
-                setColor(Color.rgb(17, 18, 20))
-                cornerRadius = dp(18).toFloat()
-                setStroke(
-                    dp(1),
-                    Color.rgb(82, 86, 92)
-                )
-            }
-
-        inputContainer?.setPadding(
-            dp(0),
-            dp(0),
-            dp(0),
-            dp(0)
-        )
-    }
-
-    private fun addPinKeypad(
-        premiumStyle: Boolean = false,
-        compact: Boolean = false
-    ) {
-
-        val keypad =
-            LinearLayout(this).apply {
-                orientation =
-                    LinearLayout.VERTICAL
-
-                gravity =
-                    Gravity.CENTER
-
-                setPadding(
-                    0,
-                    if (compact) dp(0) else dp(2),
-                    0,
-                    if (compact) dp(0) else dp(2)
-                )
-
-                visibility = View.VISIBLE
-            }
-
-        keypad.tag = "pin_display_keypad"
-
-        val rows =
-            listOf(
-                listOf("1", "2", "3"),
-                listOf("4", "5", "6"),
-                listOf("7", "8", "9"),
-                listOf("⌫", "0", "↵")
-            )
-
-        rows.forEach { values ->
-            val row =
-                LinearLayout(this).apply {
-                    orientation =
-                        LinearLayout.HORIZONTAL
-
-                    gravity =
-                        Gravity.CENTER
-                }
-
-            values.forEach { value ->
-                // Style 1: outlined keys. The subtle border keeps every key
-                // clearly separated from the black/warm background without
-                // changing the existing keypad size, spacing, or behavior.
-                val keyBackground =
-                    GradientDrawable().apply {
-                        setColor(
-                            Color.rgb(29, 30, 32)
-                        )
-                        cornerRadius =
-                            dp(34).toFloat()
-                        setStroke(
-                            dp(1),
-                            Color.rgb(66, 70, 76)
-                        )
-                    }
-
-                val key: View =
-                    if (value == "⌫" || value == "↵") {
-                        PinActionIconView(
-                            this,
-                            value == "⌫"
-                        ).apply {
-                            background = keyBackground
-                            elevation =
-                                if (premiumStyle) dp(2).toFloat() else 0f
-                            contentDescription =
-                                if (value == "⌫") {
-                                    "Delete"
-                                } else {
-                                    "Enter"
-                                }
-                            isClickable = true
-                            isFocusable = true
-
-                            setOnClickListener {
-                                handlePinKey(value)
-                            }
-                        }
-                    } else {
-                        TextView(this).apply {
-                            text = value
-                            textSize = 22f
-                            typeface = Typeface.DEFAULT_BOLD
-                            setTextColor(Color.WHITE)
-                            gravity = Gravity.CENTER
-                            background = keyBackground
-                            elevation =
-                                if (premiumStyle) dp(2).toFloat() else 0f
-                            isClickable = true
-                            isFocusable = true
-
-                            setOnClickListener {
-                                handlePinKey(value)
-                            }
-                        }
-                    }
-
-                val params =
-                    LinearLayout.LayoutParams(
-                        0,
-                        if (compact) dp(54) else dp(62),
-                        1f
-                    ).apply {
-                        leftMargin = dp(5)
-                        rightMargin = dp(5)
-                        topMargin = if (compact) dp(2) else dp(4)
-                        bottomMargin = if (compact) dp(2) else dp(4)
-                    }
-
-                row.addView(
-                    key,
-                    params
-                )
-            }
-
-            keypad.addView(
-                row,
-                LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.MATCH_PARENT,
-                    if (compact) dp(58) else dp(70)
-                )
-            )
-        }
-
-        rootLayout.addView(
-            keypad,
-            createLayoutParams(
-                0,
-                6
-            )
-        )
-
-        // Keep the custom PIN display keyboard visible on every PIN screen.
-        // Native phone keyboards remain disabled for PIN fields.
-        keypad.visibility = View.VISIBLE
-        keypad.post {
-            if (!isFinishing && !isDestroyed) {
-                keypad.visibility = View.VISIBLE
-                keypad.requestLayout()
-                keypad.invalidate()
-            }
-        }
-    }
-
-    private class PinActionIconView(
-        context: android.content.Context,
-        private val deleteIcon: Boolean
-    ) : View(context) {
-
-        private val iconPaint =
-            Paint(Paint.ANTI_ALIAS_FLAG).apply {
-                color = Color.WHITE
-                style = Paint.Style.STROKE
-                strokeWidth = dpValue(2.4f)
-                strokeCap = Paint.Cap.SQUARE
-                strokeJoin = Paint.Join.MITER
-            }
-
-        private fun dpValue(value: Float): Float {
-            return value * resources.displayMetrics.density
-        }
-
-        override fun onDraw(canvas: Canvas) {
-            super.onDraw(canvas)
-
-            val centerX = width / 2f
-            val centerY = height / 2f
-
-            // Style 14: clean outlined, One UI / iOS-inspired action icons.
-            // The icon itself is drawn larger and directly on the dark key;
-            // no filled circle is used, so the shape remains crisp and visible.
-            if (deleteIcon) {
-                val left = centerX - dpValue(12.5f)
-                val right = centerX + dpValue(10.5f)
-                val top = centerY - dpValue(8f)
-                val bottom = centerY + dpValue(8f)
-                val tip = dpValue(5.5f)
-
-                val path = Path().apply {
-                    moveTo(left + tip, top)
-                    lineTo(right, top)
-                    lineTo(right, bottom)
-                    lineTo(left + tip, bottom)
-                    lineTo(left, centerY)
-                    close()
-                }
-                canvas.drawPath(path, iconPaint)
-
-                val x = dpValue(3.7f)
-                val y = dpValue(3.7f)
-                canvas.drawLine(
-                    centerX - x,
-                    centerY - y,
-                    centerX + x,
-                    centerY + y,
-                    iconPaint
-                )
-                canvas.drawLine(
-                    centerX + x,
-                    centerY - y,
-                    centerX - x,
-                    centerY + y,
-                    iconPaint
-                )
-            } else {
-                val arrowLeft = centerX - dpValue(11f)
-                val arrowRight = centerX + dpValue(9f)
-                val arrowY = centerY
-                val returnY = centerY + dpValue(7f)
-                val arrowHead = dpValue(5.5f)
-
-                val path = Path().apply {
-                    // Horizontal return arrow.
-                    moveTo(arrowLeft, arrowY)
-                    lineTo(arrowRight, arrowY)
-                    lineTo(arrowRight, returnY)
-                    lineTo(arrowRight - dpValue(5f), returnY)
-
-                    // Arrow head.
-                    moveTo(arrowLeft, arrowY)
-                    lineTo(arrowLeft + arrowHead, arrowY - arrowHead)
-                    moveTo(arrowLeft, arrowY)
-                    lineTo(arrowLeft + arrowHead, arrowY + arrowHead)
-                }
-                canvas.drawPath(path, iconPaint)
-            }
-        }
-    }
-
-    private fun handlePinKey(
-        value: String
-    ) {
-
-        val input =
-            currentFocusedPinInput()
-                ?: return
-
-        input.requestFocus()
-
-        when (value) {
-            "⌫" -> {
-                val start =
-                    input.selectionStart
-                val end =
-                    input.selectionEnd
-
-                if (start > 0 && start == end) {
-                    input.text?.delete(
-                        start - 1,
-                        start
-                    )
-                } else if (start >= 0 && end > start) {
-                    input.text?.delete(
-                        start,
-                        end
-                    )
-                }
-            }
-
-            "↵" -> {
-                actionButton.performClick()
-            }
-
-            else -> {
-                val editable =
-                    input.text
-
-                val start =
-                    input.selectionStart.coerceAtLeast(0)
-                val end =
-                    input.selectionEnd.coerceAtLeast(0)
-
-                val safeStart =
-                    minOf(start, editable.length)
-                val safeEnd =
-                    minOf(maxOf(end, safeStart), editable.length)
-
-                if (editable.length < 6 || safeEnd > safeStart) {
-                    editable.replace(
-                        safeStart,
-                        safeEnd,
-                        value
-                    )
-                }
-            }
-        }
-
-        input.setSelection(
-            input.text?.length ?: 0
-        )
-    }
-
-    private fun currentFocusedPinInput(): EditText? {
-
-        val focused =
-            listOf(
-                pinInput,
-                confirmInput,
-                currentCredentialInput
-            ).firstOrNull { candidate ->
-                candidate != null &&
-                    isPinInput(candidate) &&
-                    candidate.hasFocus()
-            }
-
-        if (focused != null) {
-            return focused
-        }
-
-        return listOf(
-            pinInput,
-            confirmInput,
-            currentCredentialInput
-        ).firstOrNull { candidate ->
-            candidate != null &&
-                isPinInput(candidate)
-        }
-    }
-
     private fun createInputContainer():
         LinearLayout {
 
@@ -4922,7 +4333,6 @@ class LockActivity : Activity() {
         if (
             targetPackage.isEmpty()
         ) {
-
             finish()
 
             return
@@ -4939,7 +4349,6 @@ class LockActivity : Activity() {
             if (
                 launchIntent == null
             ) {
-
                 showMessage(
                     "Unable to open the app"
                 )
@@ -4963,7 +4372,6 @@ class LockActivity : Activity() {
         } catch (
             exception: Exception
         ) {
-
             showMessage(
                 "Unable to open the app"
             )
