@@ -48,6 +48,18 @@
             android:launchMode="singleTask"
             android:screenOrientation="portrait" />
 
+        <!-- Dedicated AppLock lock screen.
+             Separate task so finishing the lock screen returns
+             to the protected app instead of MainActivity. -->
+        <activity
+            android:name=".applock.LockScreenActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:launchMode="singleTask"
+            android:taskAffinity=""
+            android:screenOrientation="portrait"
+            android:windowSoftInputMode="adjustResize" />
+
         <!-- AppLock Accessibility Service -->
         <service
             android:name=".applock.AppLockAccessibilityService"
