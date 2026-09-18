@@ -59,41 +59,11 @@ class AppLockAccessibilityService : AccessibilityService() {
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         if (event == null) return
 
-        /*
-         * Window-state changes are the normal foreground signal.
-         *
-         * WINDOWS_CHANGED is also important when returning to an app from
-         * Home/Recents: Android can report the newly active window through
-         * this event before a WINDOW_STATE_CHANGED event arrives.
-         *
-         * We handle both events, but still use the same filtering and
-         * AppLockEngine state machine below. This avoids polling and keeps
-         * the existing lock behavior intact.
-         */
-        if (
-            event.eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED &&
-            event.eventType != AccessibilityEvent.TYPE_WINDOWS_CHANGED
-        ) {
+        if (event.eventType != AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
             return
         }
 
-        var packageName = event.packageName?.toString()
-
-        if (
-            packageName.isNullOrEmpty() &&
-            event.eventType == AccessibilityEvent.TYPE_WINDOWS_CHANGED
-        ) {
-            packageName = try {
-                windows
-                    .firstOrNull { it.isActive }
-                    ?.root
-                    ?.packageName
-                    ?.toString()
-            } catch (_: Exception) {
-                null
-            }
-        }
-
+        val packageName = event.packageName?.toString()
         if (packageName.isNullOrEmpty()) return
 
         if (packageName == applicationContext.packageName) {
